@@ -1,0 +1,82 @@
+<h1>{{ title }}</h1>
+<p>{{ data.release|join(' ') }} - Kernel {{ data.kernel }}</p>
+<hr>
+<table style="border-spacing:10px;text-align:left">
+	<caption style="text-align:left">CPU usage {{ data.load_average }}</caption>
+	<tr>
+		<th>CPU</th>
+		<th></th>
+		<th>Percent</th>
+	</tr>
+	{% for cpu in data.cpu_usage %}
+	<tr>
+		<td>Core {{ loop.index }}</td>
+		<td>
+<meter max="100"
+       value="{{ cpu }}"
+       high="90"
+       title="{{ cpu }}%"></td>
+		<td>{{ cpu }}%</td>
+</tr>
+{% endfor %}
+</table>
+
+<hr>
+<table style="border-spacing:10px;text-align:left">
+	<caption style="text-align:left">System Memory</caption>
+	<tr>
+		<th>Used</th>
+		<th></th>
+		<th>Available</th>
+		<th>Total</th>
+	</tr>
+	<tr>
+		<td>{{ data.memory_usage.percent }}%</td>
+		<td><meter max="100" value="{{ data.memory_usage.percent }}" title="{{ data.memory_usage.percent }}%"></td>
+		<td>{{ data.memory_usage.available_human }}</td>
+		<td>{{ data.memory_usage.total_human }}</td>
+	</tr>
+</table>
+<hr>
+<table style="border-spacing:10px;text-align:left">
+	<caption style="text-align:left">Disk usage</caption>
+	<tr>
+		<th>Device</th>
+		<th>Mountpoint</th>
+		<th>Used</th>
+		<th>Free</th>
+		<th>Total</th>
+	</tr>
+	<tr>
+		{% for p in data.disk_usage|sort(attribute='device') %}
+		<td>{{ p.device }}</td>
+		<td>{{ p.mountpoint }}</td>
+		<td>
+			<meter max="100"
+			       value="{{ p.percent }}"
+			       high="90"
+			       title="{{ p.percent }}% ({{ p.used_human }}/{{ p.total_human }})">
+</td>
+		<td>{{ p.free_human }}</td>
+		<td>{{ p.total_human }}</td>
+	</tr>
+{% endfor %}
+</table>
+{% if data.temps %}
+<hr>
+<table style="border-spacing:10px;text-align:left">
+	<caption style="text-align:left">Temperatures</caption>
+	<tr>
+		<th>Device</th>
+		<th></th>
+		<th>Temperature</th>
+	</tr>
+{% for t in data.temps.coretemp|default([]) %}
+	<tr>
+		<td>{{ t.label }}</td>
+		<td><meter value="{{ t.current }}" high="{{t.high}}" max="{{t.critical}}", title="{{t.current}}°C"></td>
+		<td>{{ t.current }}°C</td>
+	</tr>
+{% endfor %}
+</table>
+{% endif %}
