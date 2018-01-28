@@ -1,13 +1,17 @@
 from app import app, api
 from flask import render_template, request
+from flask_restful import Resource, Api
 
 import system_utils.usage as sys_usage
 from . import api_collection as api_col
+from . import vdr
 
 import pydbus
 
 api.add_resource(api_col.SystemInfo, '/api/usage')
-api.add_resource(api_col.VDR_Status, '/api/vdr')
+api.add_resource(vdr.VDR_Recordings, '/api/vdr/recordings')
+api.add_resource(vdr.VDR_Plugins, '/api/vdr/plugins')
+api.add_resource(vdr.VDR_Timers, '/api/vdr/timers')
 @app.route('/')
 @app.route('/index')
 def index():
