@@ -17,8 +17,12 @@ def bytes2human(n):
     for s in reversed(symbols):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
-            return '%.1f%sB' % (value, s)
-    return "%sB" % n
+            return {'value': f'{value:.1f}',
+                    'unit': f'{s}B',
+                    }
+    return {'value': "%s" % n,
+            'unit': 'B',
+            }
 
 def add_human_readable(dictionary):
     keys = dictionary.keys()
@@ -62,7 +66,7 @@ def collect_data():
             'disk_usage': [p for p in disk_usage()],
             'memory_usage': memory_usage(),
             'swap_usage': swap_usage(),
-            'temps': sensors_temperature(),
+            'temperatures': sensors_temperature(),
             'release': platform.linux_distribution(),
             'kernel': platform.release(),
             'system_alias': platform.system_alias(platform.system(), platform.release(), platform.version()),

@@ -9,9 +9,9 @@ def dbus_error_wrapper(f):
     @wraps(f)
     def wrapper(*args, **kwds):
         try:
-            return f(*args, **kwds)
+            return f(*args, **kwds), 200
         except (AttributeError, GLib.GError): 
-            return []
+            return [], 503
     return wrapper
 
 class VDR_Recordings(Resource):
@@ -32,3 +32,14 @@ class VDR_Timers(Resource):
     @dbus_error_wrapper
     def get(self):
         return vdr.Timers.List()
+
+class VDR_Channels(Resource):
+    @dbus_error_wrapper
+    def get(self):
+        channels = []
+        channels_raw, *_ = vdr.Channels.List()
+        for channel in channels_raw:
+            chan_num, chan_str = channel
+            channels.append(
+                    {'channel_number': chan_num, 'channel_string': chan_str})
+        return channels
