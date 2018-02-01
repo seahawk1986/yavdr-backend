@@ -3,14 +3,18 @@ import pydbus2vdr
 from gi.repository import GLib
 from functools import wraps
 
-vdr = pydbus2vdr.DBus2VDR()
+try:
+    vdr = pydbus2vdr.DBus2VDR()
+except GLib.Error:
+    # Don't stop if vdr has no dbus interface
+    pass
 
 def dbus_error_wrapper(f):
     @wraps(f)
     def wrapper(*args, **kwds):
         try:
             return f(*args, **kwds), 200
-        except (AttributeError, GLib.GError): 
+        except (AttributeError, GLib.GError):
             return [], 503
     return wrapper
 
