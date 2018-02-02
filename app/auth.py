@@ -13,6 +13,10 @@ import system_utils.pam as pam
 # TODO: generate random key for production usage
 SECRET_KEY = 'https://xkcd.com/221/'
 
+LOGIN_AUTH_ERROR = "invalid username or password"
+AUTH_ERROR = "invalid authorization, please log in and try again"
+LOGIN_AUTH_SUCCESSFULL = "login successfull"
+
 def check_login(f):
     @wraps(f)
     def wrapper(*args, **kwds):
@@ -29,7 +33,7 @@ def check_login(f):
                     return f(*args, **kwds)
             raise ValueError
         except ValueError:
-            return {'msg': 'invalid authorization, please log in and try again'}, 401
+            return {'msg': AUTH_ERROR}, 401
     return wrapper
 
 class PAM_Auth:
@@ -75,9 +79,9 @@ class TokenLogin(Resource):
             if user is not None:
                 token = pam_auth.generate_auth_token({'username': username, 'groups': groups})
                 return ({"token": token.decode('utf-8'), # the serializer returns a byte object
-                         "msg": "login successfull"},
+                         "msg": LOGIN_AUTH_SUCCESSFULL},
                         200)
-        return {"message": "invalid username or password"}, 401
+        return {"msg": LOGIN_AUTH_ERROR}, 401
 
 
 class Login(Resource):
@@ -92,9 +96,9 @@ class Login(Resource):
                 session['username'] = username
                 session['groups'] = groups
                 return ({
-                         "msg": "login successfull"},
+                         "msg": LOGIN_AUTH_SUCCESSFULL},
                         200)
-        return {"message": "invalid username or password"}, 401
+        return {"message": LOGIN_AUTH_ERROR}, 401
 
     @check_login
     def get(self):
