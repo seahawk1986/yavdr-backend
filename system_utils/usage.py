@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import datetime
 import os
 import platform
 import psutil
@@ -58,19 +59,32 @@ def load_average():
 def sensors_temperature():
     return psutil.sensors_temperatures()
 
-def collect_data():
-    return {
-            'cpu_usage': cpu_usage(),
-            'cpu_num': psutil.cpu_count(),
-            'load_average': load_average(),
-            'disk_usage': [p for p in disk_usage()],
-            'memory_usage': memory_usage(),
-            'swap_usage': swap_usage(),
-            'temperatures': sensors_temperature(),
-            'release': platform.linux_distribution(),
-            'kernel': platform.release(),
-            'system_alias': platform.system_alias(platform.system(), platform.release(), platform.version()),
+def system_alias():
+    return platform.system_alias(platform.system(), platform.release(), platform.version())
+
+def uptime():
+    return str(datetime.timedelta(seconds=int(datetime.datetime.utcnow().timestamp() - psutil.boot_time())))
+
+
+def collect_data(include=[]):
+    available_functions = {
+            'cpu_usage': cpu_usage,
+            'cpu_num': psutil.cpu_count,
+            'load_average': load_average,
+            'disk_usage': disk_usage,
+            'memory_usage': memory_usage,
+            'swap_usage': swap_usage,
+            'temperatures': sensors_temperature,
+            'release': platform.linux_distribution,
+            'kernel': platform.release,
+            'system_alias': system_alias,
+            'uptime': uptime,
             }
+    data = {}
+    for key, function in available_functions.items():
+        if (include and key in include) or not include:
+           data[key] = function()
+    return data
 
 if __name__ == '__main__':
     print(collect_data())
