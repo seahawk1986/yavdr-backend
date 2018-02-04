@@ -57,7 +57,16 @@ def load_average():
     return os.getloadavg()
 
 def sensors_temperature():
-    return psutil.sensors_temperatures()
+    temperature_data = {}
+    for sensor_module, data in psutil.sensors_temperatures().items():
+        temperature_data[sensor_module] = [s._asdict() for s in data]
+    return temperature_data
+
+def sensors_fans():
+    fan_data = {}
+    for sensor_module, data in psutil.sensors_fans().items():
+        fan_data[sensor_module] = [s._asdict() for s in data]
+    return fan_data
 
 def system_alias():
     return platform.system_alias(platform.system(), platform.release(), platform.version())
@@ -75,6 +84,7 @@ def collect_data(include=[]):
             'memory_usage': memory_usage,
             'swap_usage': swap_usage,
             'temperatures': sensors_temperature,
+            'fans': sensors_fans,
             'release': platform.linux_distribution,
             'kernel': platform.release,
             'system_alias': system_alias,
