@@ -249,171 +249,185 @@ curl -X GET -H "Content-Type: application/json" \
         <div class="card"</div>
           <div class="card-content">
             <span class="card-title"><h2>Remote Control</h2></span>
-            <p class="flow-text">
-              <code>/api/hitkey/[keyname]</code> allows you to send Key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API).
-            </p>
-            <div class="card">
-              <div class="card-content">
-                <div class="row">
-                  <div class="col s4">
-                    <div class="col s1 push-s1">
-                      <a class="waves-effect waves-light btn-large btn-floating red">
-                        <i class="material-icons">power_settings_new</i>
-                      </a>
+            <ul class="collapsible" data-collapsible="expandable">
+               <li>
+                <div class="collapsible-header">
+                    <h5><code>/api/hitkey/KEY_NAME</code></h5><span class="badge"><h5>GET POST</h5></span>
+                </div>
+                <div class="collapsible-body">
+                  <p class="flow-text">
+                    <code>/api/hitkey/[keyname]</code> allows you to send Key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API).
+                  </p>
+                  <div class="card">
+                    <div class="card-content">
+                      <div class="row">
+                        <div class="col s4">
+                          <div class="col s1 push-s1">
+                            <a name="KEY_POWER2" class="remote waves-effect waves-light btn-large btn-floating red">
+                              <i class="material-icons">power_settings_new</i>
+                            </a>
+                          </div>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_PROGR2" class="remote waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_PROG1" class="remote waves-effect waves-light btn-large col s10 push-s1">VDR</a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s3">
+                          <a name="KEY_RED" class="remote waves-effect waves-light btn-large col s10 push-s1 red"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_GREEN" class="remote waves-effect waves-light btn-large col s10 push-s1 green"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_YELLOW" class="remote waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_BLUE" class="remote waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4 left-align">
+                            <a name="KEY_MUTE" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                              <i class="material-icons">volume_off</i>
+                            </a>
+                          </div>
+                          <div class="col s4"></div>
+                        </div>
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_UP" class="remote waves-effect waves-light btn-floating btn-large red center-align">
+                              <i class="material-icons">arrow_upward</i>
+                            </a>
+                          </div>
+                          <div class="col s4"></div>
+                        </div>
+                        <div class="col s4"></div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4">
+                            <a name="KEY_VOLUMEUP" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                              <i class="material-icons">volume_up</i>
+                            </a>
+                          </div>
+                          <div class="col s4"></div>
+                        </div>
+                        <div class="col s4">
+                          <div class="col s4 center-align">
+                            <a name="KEY_LEFT" class="remote waves-effect waves-light btn-floating btn-large red">
+                              <i class="material-icons">arrow_back</i>
+                            </a>
+                          </div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_OK" class="remote waves-effect waves-light btn-floating btn-large red">
+                              <i class="material-icons">location_searching</i>
+                            </a>
+                          </div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_RIGHT" class="remote waves-effect waves-light btn-floating btn-large red"><i class="material-icons">arrow_forward</i></a>
+                          </div>
+                        </div>
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_CHANNELUP" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                              <i class="material-icons">keyboard_arrow_up</i>
+                            </a>
+                          </diV>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4">
+                            <a name="KEY_VOLUMEDOWN" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                              <i class="material-icons">volume_down</i>
+                            </a>
+                          </div>
+                        </div>
+                        <div class="col s4">
+                          <div class="col s4 center-align">
+                            <a name="KEY_ESC" class="remote waves-effect waves-light btn-floating btn-large red"><i class="material-icons">subdirectory_arrow_left</i></a>
+                          </div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_DOWN" class="remote waves-effect waves-light btn-floating btn-large red">
+                              <i class="material-icons">arrow_downward</i>
+                            </a>
+                          </div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_MENU" class="remote waves-effect waves-light btn-floating btn-large red">
+                              <i class="material-icons">menu</i>
+                            </a>
+                          </div>
+                          <!-- <div class="col s4"></div> -->
+                        </div>
+                        <div class="col s4">
+                          <div class="col s4"></div>
+                          <div class="col s4 center-align">
+                            <a name="KEY_CHANNELDOWN" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                              <i class="material-icons">keyboard_arrow_down</i>
+                            </a>
+                          </div>
+                          <div class="col s4"></div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <a name="KEY_1" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">1</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_2" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">2</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_3" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">3</a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <a name="KEY_4" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">4</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_5" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">5</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_6" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">6</a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <a name="KEY_7" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">7</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_8" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">8</a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_9" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">9</a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_0" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">0</a>
+                        </div>
+                        <div class="col s4">
+                          <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1">VDR</a>
                   </div>
                 </div>
-                <div class="row">
-                  <div class="col s3">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 red"></a>
-                  </div>
-                  <div class="col s3">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 green"></a>
-                  </div>
-                  <div class="col s3">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
-                  </div>
-                  <div class="col s3">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4 left-align">
-                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
-                        <i class="material-icons">volume_off</i>
-                      </a>
-                    </div>
-                    <div class="col s4"></div>
-                  </div>
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red center-align">
-                        <i class="material-icons">arrow_upward</i>
-                      </a>
-                    </div>
-                    <div class="col s4"></div>
-                  </div>
-                  <div class="col s4"></div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4">
-                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
-                        <i class="material-icons">volume_up</i>
-                      </a>
-                    </div>
-                    <div class="col s4"></div>
-                  </div>
-                  <div class="col s4">
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red">
-                        <i class="material-icons">arrow_back</i>
-                      </a>
-                    </div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red">
-                        <i class="material-icons">location_searching</i>
-                      </a>
-                    </div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red"><i class="material-icons">arrow_forward</i></a>
-                    </div>
-                  </div>
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
-                        <i class="material-icons">keyboard_arrow_up</i>
-                      </a>
-                    </diV>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4">
-                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
-                        <i class="material-icons">volume_down</i>
-                      </a>
-                    </div>
-                  </div>
-                  <div class="col s4">
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red"><i class="material-icons">subdirectory_arrow_left</i></a>
-                    </div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large red">
-                        <i class="material-icons">arrow_downward</i>
-                      </a>
-                    </div>
-                    <div class="col s4"></div>
-                  </div>
-                  <div class="col s4">
-                    <div class="col s4"></div>
-                    <div class="col s4 center-align">
-                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
-                        <i class="material-icons">keyboard_arrow_down</i>
-                      </a>
-                    </div>
-                    <div class="col s4"></div>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">1</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">2</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">3</a>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">4</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">5</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">6</a>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">7</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">8</a>
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">9</a>
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="col s4">
-                    <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
-                  </div>
-                  <div class="col s4">
-                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">0</a>
-                  </div>
-                  <div class="col s4">
-                    <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
-                  </div>
-                </div>
-              </div>
-            </div>
+              </li>
+            </ul>
             
           </div>
         </div>
@@ -544,6 +558,33 @@ curl -X GET -H "Content-Type: application/json" \
         },
       })
     });
+    $('.remote').click(function() {
+      $.ajax({
+        type: "POST",
+        url: "/api/hitkey/" + $( this ).attr("name"),
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text("hitkey:" + data.msg);
+          Materialize.toast('pressed key ' + data.key, 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 501) {
+            Materialize.toast('lircd2uinput is not available', 4000, 'rounded')
+          } else if (jqXHR.status == 400) {
+            Materialize.toast('invalid key' + data.key, 4000, 'rounded')
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+      })
+    });
+
   });
   </script>
 </body>
