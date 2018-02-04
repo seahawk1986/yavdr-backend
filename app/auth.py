@@ -6,7 +6,7 @@ from functools import wraps
 from app import app, api
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
-from flask import request, session
+from flask import request, session, Response
 from flask_restful import Resource, reqparse
 import system_utils.pam as pam
 
@@ -17,23 +17,37 @@ LOGIN_AUTH_ERROR = "invalid username or password"
 AUTH_ERROR = "invalid authorization, please log in and try again"
 LOGIN_AUTH_SUCCESSFULL = "login successfull"
 
-def check_login(f):
+def check_group_permissions(groups, limit_groups):
+    if limit_groups:
+        if set(limit_groups).intersection(groups):
+            return True
+        return False
+    return True
+
+def login_required(f, limit_groups=None):
     @wraps(f)
     def wrapper(*args, **kwds):
-        if 'userdata' and 'groups' in session:
-            return f(*args, **kwds)
         try:
+            if 'username' in session and 'groups' in session:
+                if check_group_permissions(session['groups'], limit_groups):
+                    return f(*args, **kwds)
+                raise PermissionError
             auth_data = request.headers.get('Authorization')
             if not auth_data:
-                raise ValueError
+                raise PermissionError
             token = auth_data.split()[-1]
             if token:
                 token_data = PAM_Auth.verify_auth_token(token)
-                if token_data is not None:
+                if (token_data is not None and
+                check_group_permissions(token_data['groups'], limit_groups)):
                     return f(*args, **kwds)
-            raise ValueError
-        except ValueError:
-            return {'msg': AUTH_ERROR}, 401
+            raise PermissionError
+        except PermissionError:
+            return Response(
+                'Could not verify your access level for that URL.\n'
+                'You have to login with proper credentials', 401,
+                {'WWW-Authenticate': 'Bearer realm="Login Required"'})
+                # {'msg': AUTH_ERROR}, 401)
     return wrapper
 
 class PAM_Auth:
@@ -47,8 +61,6 @@ class PAM_Auth:
         return None, None
 
     def generate_auth_token(self, content, expiration=6000):
-        print(content)
-        print(type(content))
         #serializer = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         serializer = Serializer(SECRET_KEY, expires_in=expiration)
         return serializer.dumps({'token': content})
@@ -66,7 +78,7 @@ class PAM_Auth:
             return None # valid token, but expired
         except BadSignature:
             return None # invalid token
-        return data
+        return data['token']
 
 class TokenLogin(Resource):
     def post(self):
@@ -100,7 +112,6 @@ class Login(Resource):
                         200)
         return {"message": LOGIN_AUTH_ERROR}, 401
 
-    @check_login
     def get(self):
         if 'username' in session and 'groups' in session:
             return {'msg': 'authenticated by cookie',
@@ -111,10 +122,9 @@ class Login(Resource):
         if token:
             token_data = PAM_Auth.verify_auth_token(token)
             if token_data is not None:
-                token_dict = token_data.get('token')
                 return {'msg': "valid token",
-                        'username': token_dict.get('username'),
-                        'groups': token_dict.get('groups')}, 200
+                        'username': token_data.get('username'),
+                        'groups': token_data.get('groups')}, 200
             return {'msg': 'invalid token'}, 401
         else:
             return {}, 401
