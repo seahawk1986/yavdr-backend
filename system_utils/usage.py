@@ -69,10 +69,14 @@ def sensors_fans():
     return fan_data
 
 def system_alias():
-    return platform.system_alias(platform.system(), platform.release(), platform.version())
+    return platform.system_alias(platform.system(),
+                                 platform.release(),
+                                 platform.version())
 
 def uptime():
-    return str(datetime.timedelta(seconds=int(datetime.datetime.utcnow().timestamp() - psutil.boot_time())))
+    return str(
+        datetime.timedelta(seconds=int(
+            datetime.datetime.utcnow().timestamp() - psutil.boot_time())))
 
 
 def collect_data(include=[]):
