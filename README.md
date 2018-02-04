@@ -5,3 +5,6 @@ For Ubuntu 18.04 you need to install the following packages (in addition to a [y
 ```
 sudo apt-get install python3-flask python3-flask-restful pydbus2vdr
 ```
+
+## Starting the development server
+To start the development server on Port 5000 run the included `run.sh` script.
