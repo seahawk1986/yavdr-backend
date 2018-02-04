@@ -7,16 +7,16 @@
     <!-- Compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <title>yaVDR RESTful API</title>
+    <title>yaVDR Web API</title>
     <style>textarea.materialize-textarea{height: 4rem;}
       </style>
     </head>
 
 <body>
     <div class="container">
-        <h1>yaVDR RESTful API Documentation</h1>
+        <h1>yaVDR Web API Documentation</h1>
         <p class="flow-text">
-          yaVDR provides a RESTful api service for status information and administrative purposes (which is used by the included web frontend).
+          yaVDR provides a (mostly) RESTful api service for status information and administrative purposes (which is used by the included web frontend).
           This documentation should enable you to write own clients if you feel the need to integrate yaVDR in your environment.
         </p>
         <h2>How to use this API documentation</h2>
@@ -60,14 +60,15 @@
                     <code>application/json</code>
                     <h5>Status Code: <code>200</code></h5>
                     <p class="flow-text">Successfull authentication. A session cookie is set. Returns a JSON message:
-                        <pre><code>{
+                      <pre><code>
+{
   "msg": "login successfull"
-}
-                        </code></pre>
+}</code></pre>
                     </p>
                     <h5>Status Code: <code>401</code></h5>
-                    <pre><code>{
-  "message": "invalid username or password"
+                    <pre><code>
+{
+  "msg": "invalid username or password"
 }</code></pre>
                   </div>
                   
@@ -155,20 +156,21 @@
                       Sending a <code>POST</code> request with correct login data on <code>/api/login/token</code> returns a token.
                       You can validate the token with the <code>GET</code> method of <code>/api/login</code> (see above).
                       In order to use the token for further API requests, you must send a header field with the token information:
-                      <pre>Authorization: Bearer YOUR_TOKEN</pre>
-                      </br>Use the form and the buttons below to try it:
+                      <pre>Authorization: Bearer YOUR_TOKEN</pre></p>
+                    <p class="flow-text">
+                      Using a token for authentication purposes is especially useful if you don't want to store session cookies or reuse the token on other clients. The following example shows how to obtain a token for a shell script using <code>curl</code> and <code>jq</code>:
                     </p>
-                  </div>
-                  <div class="section">
-                    <h4>Response Class (Status 200)</h4>
-                    <p class="flow-text">Returns a JSON message:
-                        <pre><code>{
-  "msg": "string"
-  "token": "string"                            
-}</code></pre>
+                    <pre><code>
+token=$(curl -X POST -H "Content-Type: application/json" \
+        -d '{"username": "USERNAME", "password": "PASSWORD"}' \
+        http://localhost:5000/api/login/token | jq -r '.token')</code></pre>
+                    <p class="flow-text">
+                      The obtained token can be used to access protected API routes, e.g.:
                     </p>
-                    <h5>Response Content Type:</h5>
-                    <code>application/json</code>
+                    <pre><code>
+curl -X GET -H "Content-Type: application/json" \
+     -H "Authorization: Bearer $token" \
+     http://localhost:5000/api/login</code></pre>
                   </div>
                   <div class="section">
                     <h4>Parameters</h4>
@@ -184,11 +186,22 @@
                   </div>
                   <div class="section">
                     <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">If authentication is successfull, a token is returned:</p>
+                    <pre><code>{
+  "msg": "login successfull"
+  "token": "string"                            
+}</code></pre>
                     <h5>Status Code: <code>401</code></h5>
                     <pre><code>{
   "message": "invalid username or password"
 }</code></pre>
                   </div>
+                    <p class="flow-text">
+                      </br>Use the form and the buttons below to try it:
+                    </p>
                     <div class="divider"></div>
                     <div class="row">
                         <form class="col s12">
@@ -230,11 +243,191 @@
                     </p>
                     <button class="btn waves-effect waves-light" type="button" name="token_delete" id="logout">Logout</button>
                </li>
-               
-                
              </ul>
-            <div>
+          </div>
         </div>
+        <div class="card"</div>
+          <div class="card-content">
+            <span class="card-title"><h2>Remote Control</h2></span>
+            <p class="flow-text">
+              <code>/api/hitkey/[keyname]</code> allows you to send Key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API).
+            </p>
+            <div class="card">
+              <div class="card-content">
+                <div class="row">
+                  <div class="col s4">
+                    <div class="col s1 push-s1">
+                      <a class="waves-effect waves-light btn-large btn-floating red">
+                        <i class="material-icons">power_settings_new</i>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1">VDR</a>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s3">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 red"></a>
+                  </div>
+                  <div class="col s3">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 green"></a>
+                  </div>
+                  <div class="col s3">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
+                  </div>
+                  <div class="col s3">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4 left-align">
+                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                        <i class="material-icons">volume_off</i>
+                      </a>
+                    </div>
+                    <div class="col s4"></div>
+                  </div>
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red center-align">
+                        <i class="material-icons">arrow_upward</i>
+                      </a>
+                    </div>
+                    <div class="col s4"></div>
+                  </div>
+                  <div class="col s4"></div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4">
+                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                        <i class="material-icons">volume_up</i>
+                      </a>
+                    </div>
+                    <div class="col s4"></div>
+                  </div>
+                  <div class="col s4">
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red">
+                        <i class="material-icons">arrow_back</i>
+                      </a>
+                    </div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red">
+                        <i class="material-icons">location_searching</i>
+                      </a>
+                    </div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red"><i class="material-icons">arrow_forward</i></a>
+                    </div>
+                  </div>
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                        <i class="material-icons">keyboard_arrow_up</i>
+                      </a>
+                    </diV>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4">
+                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                        <i class="material-icons">volume_down</i>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="col s4">
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red"><i class="material-icons">subdirectory_arrow_left</i></a>
+                    </div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large red">
+                        <i class="material-icons">arrow_downward</i>
+                      </a>
+                    </div>
+                    <div class="col s4"></div>
+                  </div>
+                  <div class="col s4">
+                    <div class="col s4"></div>
+                    <div class="col s4 center-align">
+                      <a class="waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                        <i class="material-icons">keyboard_arrow_down</i>
+                      </a>
+                    </div>
+                    <div class="col s4"></div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">1</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">2</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">3</a>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">4</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">5</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">6</a>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">7</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">8</a>
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">9</a>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col s4">
+                    <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                  </div>
+                  <div class="col s4">
+                    <a class="waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">0</a>
+                  </div>
+                  <div class="col s4">
+                    <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        <div class="card"</div>
+          <div class="card-content">
+            <span class="card-title"><h2>System</h2></span>
+            <p class="flow-text">
+              <code>GET /api/system/status</code> returns a JSON object containing various informations about the system status like cpu load, memory usage, temperatures and fanspeeds (if supported by lm-sensors), uptime etc.
+            </p>
+          </div>
+        </div>
+          
+
+                 
     <!--     <div> -->
     <!--         <button id="press_ok">Press KEY_OK</button> -->
     <!--     </div> -->
