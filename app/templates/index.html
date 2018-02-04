@@ -256,7 +256,7 @@ curl -X GET -H "Content-Type: application/json" \
                 </div>
                 <div class="collapsible-body">
                   <p class="flow-text">
-                    <code>/api/hitkey/[keyname]</code> allows you to send Key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API).
+                    <code>/api/hitkey/KEY_NAME</code> allows you to send Key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API). KEY_NAME can be any of the key definitions supported by linux (<a href="https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h#L75">see input-event-codes.h</a>)
                   </p>
                   <div class="card">
                     <div class="card-content">
@@ -269,24 +269,61 @@ curl -X GET -H "Content-Type: application/json" \
                           </div>
                         </div>
                         <div class="col s4">
-                          <a name="KEY_PROGR2" class="remote waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
+                          <a name="KEY_PROG2" class="remote waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
                         </div>
                         <div class="col s4">
                           <a name="KEY_PROG1" class="remote waves-effect waves-light btn-large col s10 push-s1">VDR</a>
                         </div>
                       </div>
                       <div class="row">
-                        <div class="col s3">
-                          <a name="KEY_RED" class="remote waves-effect waves-light btn-large col s10 push-s1 red"></a>
+                        <div class="col s4">
+                          <a name="KEY_REWIND" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">fast_rewind</i>
+                          </a>
                         </div>
-                        <div class="col s3">
-                          <a name="KEY_GREEN" class="remote waves-effect waves-light btn-large col s10 push-s1 green"></a>
+                        <div class="col s4">
+                          <a name="KEY_PLAY" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">play_arrow</i>
+                          </a>
                         </div>
-                        <div class="col s3">
-                          <a name="KEY_YELLOW" class="remote waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
+                        <div class="col s4">
+                          <a name="KEY_FASTFORWARD" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">fast_forward</i>
+                          </a>
                         </div>
-                        <div class="col s3">
-                          <a name="KEY_BLUE" class="remote waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <a name="KEY_BACK" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">skip_previous</i>
+                          </a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_PAUSE" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">pause</i>
+                          </a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_NEXT" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">skip_next</i>
+                          </a>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s4">
+                          <a name="KEY_RECORD" class="remote waves-effect waves-light btn-large col s10 push-s1 red darken-4">
+                            <i class="material-icons">fiber_manual_record</i>
+                          </a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_STOP" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">stop</i>
+                          </a>
+                        </div>
+                        <div class="col s4">
+                          <a name="KEY_INFO" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                            <i class="material-icons">info</i>
+                          </a>
                         </div>
                       </div>
                       <div class="row">
@@ -377,6 +414,20 @@ curl -X GET -H "Content-Type: application/json" \
                             </a>
                           </div>
                           <div class="col s4"></div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col s3">
+                          <a name="KEY_RED" class="remote waves-effect waves-light btn-large col s10 push-s1 red"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_GREEN" class="remote waves-effect waves-light btn-large col s10 push-s1 green"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_YELLOW" class="remote waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
+                        </div>
+                        <div class="col s3">
+                          <a name="KEY_BLUE" class="remote waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
                         </div>
                       </div>
                       <div class="row">
