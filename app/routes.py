@@ -53,7 +53,7 @@ def usage():
     data = sys_usage.collect_data()
     return render_template('usage.html', title='System Information', data=data)
 
-@app.route('/api/hitkey/<string:key>', methods=['POST'])
+@app.route('/api/hitkey/<string:key>', methods=['GET', 'POST'])
 def hitkey(key):
     try:
         bus = pydbus.SystemBus()
