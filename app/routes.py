@@ -1,6 +1,6 @@
 import os
 from app import app, api
-from flask import render_template, request, session, redirect, url_for, jsonify
+from flask import render_template, request, session, redirect, url_for, jsonify, send_from_directory
 from flask_restful import Resource, Api
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
@@ -24,6 +24,19 @@ api.add_resource(vdr.VDR_Recordings, '/api/vdr/recordings')
 api.add_resource(vdr.VDR_Plugins, '/api/vdr/plugins')
 api.add_resource(vdr.VDR_Timers, '/api/vdr/timers')
 api.add_resource(vdr.VDR_Channels, '/api/vdr/channels')
+
+# resources
+@app.route('/js/<path:path>')
+def send_js(path):
+    return send_from_directory('static', os.path.join('js', path))
+
+@app.route('/css/<path:path>')
+def send_css(path):
+    return send_from_directory('static', os.path.join('css', path))
+
+@app.route('/fonts/<path:path>')
+def send_fonts(path):
+    return send_from_directory('static', os.path.join('fonts', path))
 
 @app.route('/index')
 @app.route('/')
