@@ -66,13 +66,16 @@ def usage():
     data = sys_usage.collect_data()
     return render_template('usage.html', title='System Information', data=data)
 
+@pam_auth.login_required
 @app.route('/api/hitkey/<string:key>', methods=['GET', 'POST'])
 def hitkey(key):
     try:
         bus = pydbus.SystemBus()
         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
-        response = lircd2uinput.emit_key(key.upper())
+        success, key_code = lircd2uinput.emit_key(key.upper())
     except GLib.Error:
-        return jsonify({'msg': 'lircd2uinput is not available'}), 503
-    print(response)
-    return jsonify({'msg': 'ok', 'response': response}), 200
+        return jsonify({'msg': 'lircd2uinput is not available'}), 502
+    if success:
+        return jsonify({'msg': 'ok', 'key': key.upper()}), 200
+    else:
+        return jsonify({'msg': 'unknown key'}), 400
