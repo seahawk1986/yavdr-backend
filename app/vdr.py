@@ -45,7 +45,7 @@ class VDR_Timers(Resource):
             status, channel, day, start, stop, priority, lifetime, filename, aux = t.split(':')
             t_data.append({"status": int(status), "channel": channel, "day": day,
                            "start": int(start), "stop": int(stop), "priority": int(priority), "lifetime": lifetime, "filename": filename, "aux": aux})
-        return timers
+        return t_data
 
 class VDR_Channels(Resource):
     @pam_auth.login_required
