@@ -818,7 +818,12 @@ curl -X GET -H "Content-Type: application/json" \
     $('.remote').click(function() {
       $.ajax({
         type: "POST",
-        url: "/api/hitkey/" + $( this ).attr("name"),
+        url: "/api/hitkey/",
+        contentType: 'application/json; charset=UTF-8',
+        dataType: 'json',
+        data: JSON.stringify({
+          "key": $( this ).attr("name"),
+        }),
         beforeSend: function(xhr) {
           if (localStorage.token) {
             xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
