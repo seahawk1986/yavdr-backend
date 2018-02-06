@@ -28,7 +28,7 @@
           <div class="card-content">
             <span class="card-title"><h2>Authentication</h2></span>
             <p class="flow-text">
-              Access is granted based on PAM authentication, so you can login with a local username and password. The groups of the user at login time are used to determine the permissions for protected routes. In order to gain full access, you user must be a member of the group <code>sudo</code>. Members of the group <code>adm</code> are allowed to use the <code>/api/log/</code> routes. All authenticated users are allowed to access the <code>/api/status/</code> and <code>/api/hitkey/</code> routes.
+              Access is granted based on PAM authentication, so you can login with a local username and password. The groups of the user at login time are used to determine the permissions for protected routes. In order to gain full access, you user must be a member of the group <code>sudo</code>. Members of the group <code>adm</code> are allowed to use the <code>/api/log/</code> routes. All authenticated users are allowed to access the  <code>/api/hitkey/</code> route and access status information about the system and the vdr.
             </p>
             <ul class="collapsible" data-collapsible="expandable">
                <li>
@@ -252,7 +252,7 @@ curl -X GET -H "Content-Type: application/json" \
             <ul class="collapsible" data-collapsible="expandable">
                <li>
                 <div class="collapsible-header">
-                    <h5><code>/api/hitkey/KEY_NAME</code></h5><span class="badge"><h5>GET POST</h5></span>
+                    <h5><code>/api/hitkey/KEY_NAME</code></h5><span class="badge"><h5>POST</h5></span>
                 </div>
                 <div class="collapsible-body">
                   <p class="flow-text">

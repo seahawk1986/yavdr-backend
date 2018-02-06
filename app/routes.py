@@ -67,7 +67,7 @@ def usage():
     return render_template('usage.html', title='System Information', data=data)
 
 @pam_auth.login_required
-@app.route('/api/hitkey/<string:key>', methods=['GET', 'POST'])
+@app.route('/api/hitkey/<string:key>', methods=['POST'])
 def hitkey(key):
     try:
         bus = pydbus.SystemBus()
