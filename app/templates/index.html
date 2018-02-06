@@ -569,13 +569,14 @@ curl -X GET -H "Content-Type: application/json" \
                     <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
                       <pre><code>[
   {
+    "raw": "1:T-8468-12291-772:2018-02-06:1958:2025:50:99:Tagesschau:",
     "status": 1,
     "channel": "T-8468-12291-772",
     "day": "2018-02-06",
     "start": 1958,
     "stop": 2025,
     "priority": 50,
-    "lifetime": "99",
+    "lifetime": 99,
     "filename": "Tagesschau",
     "aux": ""
   }
@@ -606,7 +607,96 @@ curl -X GET -H "Content-Type: application/json" \
                    <h5><code>/api/vdr/recordings</code></h5>
                    <span class="badge"><h5>GET</h5></span></div>
                  <div class="collapsible-body">
-                   TODO: Write description
+                 </div>
+                 <div class="collapsible-body">
+                  <div class="section">
+                    <h4>Implementation Notes</h4>
+                    <p class="flow-text">
+                      Returns a list of vdr's recordings.
+                    </p>
+                  </div>
+                  <div class="section">
+                    <h4>Parameters:</h4>
+                    <h5>None</h5>
+                  </div>
+                  <div class="section">
+                    <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">Successfull authentication. A list of recordings is returned as a JSON message, e.g.:
+                      <pre><code>[
+    {
+        "RecNum": 1,
+        "Path": "/srv/vdr/video/heute-journal/2017-01-30.22.23.16-0.rec",
+        "Name": "heute-journal",
+        "FullName": "heute-journal",
+        "Title": "30.01.17 22:23  heute-journal",
+        "Start": 1485811380,
+        "Priority": 50,
+        "Lifetime": 99,
+        "HierarchyLevels": 0,
+        "FramesPerSecond": 50.02779322,
+        "NumFrames": 98897,
+        "LengthInSeconds": 1976,
+        "FileSizeMB": 647,
+        "IsPesRecording": false,
+        "IsNew": true,
+        "IsEdited": false,
+        "Info/ChannelID": "T-8468-16481-16961",
+        "Info/ChannelName": "ZDF HD",
+        "Info/Title": "heute-journal",
+        "Info/ShortText": "Wetter",
+        "Info/Description": "Wohin steuern die USA? - Die Executive Orders des Donald Trump\nDie NATO-Man\u00f6ver in Polen - Muskelspiele gegen\u00fcber Putin\nBahnchef Grube schmei\u00dft hin - Die Lage der Bahn AG Moderation: Marietta Slomka\nHD-Produktion",
+        "Info/FramesPerSecond": 50.02779322,
+        "Info/Component/0/stream": 2,
+        "Info/Component/0/type": 3,
+        "Info/Component/0/language": "deu",
+        "Info/Component/0/description": "Stereo",
+        "Info/Component/1/stream": 2,
+        "Info/Component/1/type": 3,
+        "Info/Component/1/language": "mul",
+        "Info/Component/1/description": "ohne Originalton",
+        "Info/Component/2/stream": 2,
+        "Info/Component/2/type": 3,
+        "Info/Component/2/language": "mis",
+        "Info/Component/2/description": "ohne Audiodeskription",
+        "Info/Component/3/stream": 2,
+        "Info/Component/3/type": 3,
+        "Info/Component/3/language": "deu",
+        "Info/Component/3/description": "Dolby Digital 2.0",
+        "Info/Component/4/stream": 5,
+        "Info/Component/4/type": 11,
+        "Info/Component/4/language": "deu",
+        "Info/Component/4/description": "HDTV",
+        "Info/Component/5/stream": 3,
+        "Info/Component/5/type": 16,
+        "Info/Component/5/language": "deu",
+        "Info/Component/5/description": "DVB-Untertitel",
+        "Info/Component/6/stream": 2,
+        "Info/Component/6/type": 5,
+        "Info/Component/6/language": "deu"
+    }
+]</code></pre>
+                    </p>
+                    <h5>Status Code: <code>401</code></h5>
+                    <p class="flow-text">Authentication failed.</p>
+                    <h5>Status Code: <code>503</code></h5>
+                    <p class="flow-text">Connection to dbus2vdr failed.</p>
+                  </div>
+                  <p class="flow-text">Press the button below to see the API call in action:</p>
+                    <div class="divider"></div>
+                    <div class="row">
+                          <a id="vdr_recordings" class="btn waves-effect waves-light" type="button">
+                          List Recordings (GET) <i class="material-icons right">send</i>
+                          </a>
+                        </form>
+                    </div>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="vdr_recordings_response"></pre>
+                    <p class="flow-text">
+                      Status Code: <code id="vdr_recordings_status_code"></code>
+                    </p>
                  </div>
                </li>
                <li>
@@ -809,6 +899,37 @@ curl -X GET -H "Content-Type: application/json" \
         },
       })
     });
+
+    $('#vdr_recordings').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/api/vdr/recordings",
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text(data);
+          
+          Materialize.toast('loaded recordings information', 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 503) {
+            Materialize.toast('dbus2vdr is not available', 4000, 'rounded')
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+        complete: function(data) {
+          $('#vdr_recordings_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#vdr_recordings_status_code').text(data.status);
+        },
+      })
+    });
+
   });
   </script>
 </body>
