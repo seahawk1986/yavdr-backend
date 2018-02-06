@@ -46,7 +46,7 @@ class HitKeys(Resource):
         try:
             json_data = request.get_json()
             if json_data:
-                keys = json_data.get('keys').upper()
+                keys = json_data.get('keys')
                 if keys:
                     bus = pydbus.SystemBus()
                     lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
@@ -60,6 +60,6 @@ class HitKeys(Resource):
         except GLib.Error:
             return {'msg': 'lircd2uinput is not available'}, 503
         if success:
-            return {'msg': 'ok', 'keys': key}, 200
+            return {'msg': 'ok', 'keys': keys}, 200
         else:
             return {'msg': 'unknown key: {}'.format(key)}, 400
