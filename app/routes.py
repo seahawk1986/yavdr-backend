@@ -74,7 +74,7 @@ def hitkey(key):
         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
         success, key_code = lircd2uinput.emit_key(key.upper())
     except GLib.Error:
-        return jsonify({'msg': 'lircd2uinput is not available'}), 502
+        return jsonify({'msg': 'lircd2uinput is not available'}), 503
     if success:
         return jsonify({'msg': 'ok', 'key': key.upper()}), 200
     else:
