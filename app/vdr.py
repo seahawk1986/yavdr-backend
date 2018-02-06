@@ -2,6 +2,7 @@ from flask_restful import Resource
 import pydbus2vdr
 from gi.repository import GLib
 from functools import wraps
+from . import auth as pam_auth
 
 try:
     vdr = pydbus2vdr.DBus2VDR()
@@ -19,6 +20,7 @@ def dbus_error_wrapper(f):
     return wrapper
 
 class VDR_Recordings(Resource):
+    @pam_auth.login_required
     @dbus_error_wrapper
     def get(self):
         recordings = []
@@ -28,16 +30,25 @@ class VDR_Recordings(Resource):
         return recordings
 
 class VDR_Plugins(Resource):
+    @pam_auth.login_required
     @dbus_error_wrapper
     def get(self):
         return [p._asdict() for p in vdr.Plugins.list()]
 
 class VDR_Timers(Resource):
+    @pam_auth.login_required
     @dbus_error_wrapper
     def get(self):
-        return vdr.Timers.List()
+        timers = vdr.Timers.List()
+        t_data = []
+        for t in timers:
+            status, channel, day, start, stop, priority, lifetime, filename, aux = t.split(':')
+            t_data.append({"status": int(status), "channel": channel, "day": day,
+                           "start": int(start), "stop": int(stop), "priority": int(priority), "lifetime": lifetime, "filename": filename, "aux": aux})
+        return timers
 
 class VDR_Channels(Resource):
+    @pam_auth.login_required
     @dbus_error_wrapper
     def get(self):
         channels = []

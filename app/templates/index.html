@@ -571,6 +571,7 @@ curl -X GET -H "Content-Type: application/json" \
                     <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
                       <pre><code>
 [
+  "1:T-8468-12291-772:2018-02-06:1958:2025:50:99:Tagesschau:"
 ]
 </code></pre>
                     </p>
@@ -787,7 +788,7 @@ curl -X GET -H "Content-Type: application/json" \
         success: function(data) {
           $('#login_result').text(data);
           
-          Materialize.toast('loaded plugin information', 4000, 'rounded')
+          Materialize.toast('loaded timer information', 4000, 'rounded')
         },
         error: function(jqXHR, ajaxOptions, thrownError) {
           if (jqXHR.status == 503) {
