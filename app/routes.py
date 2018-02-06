@@ -20,6 +20,8 @@ app.secret_key = os.urandom(24)
 api.add_resource(pam_auth.Login, '/api/login')
 api.add_resource(pam_auth.TokenLogin, '/api/login/token')
 api.add_resource(api_col.SystemInfo, '/api/system/status')
+api.add_resource(api_col.HitKey, '/api/hitkey')
+api.add_resource(api_col.HitKeys, '/api/hitkeys')
 api.add_resource(vdr.VDR_Recordings, '/api/vdr/recordings')
 api.add_resource(vdr.VDR_Plugins, '/api/vdr/plugins')
 api.add_resource(vdr.VDR_Timers, '/api/vdr/timers')
@@ -66,16 +68,30 @@ def usage():
     data = sys_usage.collect_data()
     return render_template('usage.html', title='System Information', data=data)
 
-@pam_auth.login_required
-@app.route('/api/hitkey/<string:key>', methods=['POST'])
-def hitkey(key):
-    try:
-        bus = pydbus.SystemBus()
-        lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
-        success, key_code = lircd2uinput.emit_key(key.upper())
-    except GLib.Error:
-        return jsonify({'msg': 'lircd2uinput is not available'}), 503
-    if success:
-        return jsonify({'msg': 'ok', 'key': key.upper()}), 200
-    else:
-        return jsonify({'msg': 'unknown key'}), 400
+# @pam_auth.login_required
+# @app.route('/api/hitkey', methods=['POST'])
+# def hitkey(key):
+#     try:
+#         bus = pydbus.SystemBus()
+#         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
+#         success, key_code = lircd2uinput.emit_key(key.upper())
+#     except GLib.Error:
+#         return jsonify({'msg': 'lircd2uinput is not available'}), 503
+#     if success:
+#         return jsonify({'msg': 'ok', 'key': key.upper()}), 200
+#     else:
+#         return jsonify({'msg': 'unknown key'}), 400
+
+# @pam_auth.login_required
+# @app.route('/api/hitkeys', methods=['POST'])
+# def hitkey(key):
+#     try:
+#         bus = pydbus.SystemBus()
+#         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
+#         success, key_code = lircd2uinput.emit_key(key.upper())
+#     except GLib.Error:
+#         return jsonify({'msg': 'lircd2uinput is not available'}), 503
+#     if success:
+#         return jsonify({'msg': 'ok', 'key': key.upper()}), 200
+#     else:
+#         return jsonify({'msg': 'unknown key'}), 400
