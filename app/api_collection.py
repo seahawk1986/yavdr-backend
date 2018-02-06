@@ -1,6 +1,7 @@
 import time
 import pydbus        
 from gi.repository import GLib
+from flask import request
 from flask_restful import Resource
 import system_utils.usage as sys_usage
 from . import auth as pam_auth
