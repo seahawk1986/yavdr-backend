@@ -43,8 +43,8 @@ class VDR_Timers(Resource):
         t_data = []
         for t in timers:
             status, channel, day, start, stop, priority, lifetime, filename, aux = t.split(':')
-            t_data.append({"status": int(status), "channel": channel, "day": day,
-                           "start": int(start), "stop": int(stop), "priority": int(priority), "lifetime": lifetime, "filename": filename, "aux": aux})
+            t_data.append({"raw": t, "status": int(status), "channel": channel, "day": day,
+                           "start": int(start), "stop": int(stop), "priority": int(priority), "lifetime": int(lifetime), "filename": filename, "aux": aux})
         return t_data
 
 class VDR_Channels(Resource):

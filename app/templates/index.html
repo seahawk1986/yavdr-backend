@@ -519,14 +519,12 @@ curl -X GET -H "Content-Type: application/json" \
                      <code>application/json</code>
                      <h5>Status Code: <code>200</code></h5>
                      <p class="flow-text">Successfull authentication. A list of currently loaded plugins is returned as a JSON message, e.g.:
-                       <pre><code>
-[
+                       <pre><code>[
     {
         "name":  "dbus2vdr",
         "version ": "31"
     }
-]
-</code></pre>
+]</code></pre>
                      </p>
                      <h5>Status Code: <code>401</code></h5>
                      <p class="flow-text">Authentication failed.</p>
@@ -569,11 +567,19 @@ curl -X GET -H "Content-Type: application/json" \
                     <code>application/json</code>
                     <h5>Status Code: <code>200</code></h5>
                     <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
-                      <pre><code>
-[
-  "1:T-8468-12291-772:2018-02-06:1958:2025:50:99:Tagesschau:"
-]
-</code></pre>
+                      <pre><code>[
+  {
+    "status": 1,
+    "channel": "T-8468-12291-772",
+    "day": "2018-02-06",
+    "start": 1958,
+    "stop": 2025,
+    "priority": 50,
+    "lifetime": "99",
+    "filename": "Tagesschau",
+    "aux": ""
+  }
+]</code></pre>
                     </p>
                     <h5>Status Code: <code>401</code></h5>
                     <p class="flow-text">Authentication failed.</p>
