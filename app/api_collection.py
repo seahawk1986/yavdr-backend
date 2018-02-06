@@ -27,7 +27,7 @@ class HitKey(Resource):
                     key = key.upper()
                     bus = pydbus.SystemBus()
                     lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
-                    success, key_code = lircd2uinput.emit_key(key))
+                    success, key_code = lircd2uinput.emit_key(key)
                 else:
                     success = False
                     key_code = None
