@@ -50,7 +50,7 @@ class HitKeys(Resource):
                     lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
                     for key in keys:
                         key = key.upper()
-                        success, key_code = lircd2uinput.emit_key(key))
+                        success, key_code = lircd2uinput.emit_key(key)
                         time.sleep(.1)
                 else:
                     success = False
