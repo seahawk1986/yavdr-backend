@@ -34,11 +34,11 @@ class HitKey(Resource):
                     success = False
                     key_code = None
         except GLib.Error:
-            return jsonify({'msg': 'lircd2uinput is not available'}), 503
+            return {'msg': 'lircd2uinput is not available'}, 503
         if success:
-            return jsonify({'msg': 'ok', 'key': key}), 200
+            return {'msg': 'ok', 'key': key}, 200
         else:
-            return jsonify({'msg': 'unknown key'}), 400
+            return {'msg': 'unknown key'}, 400
 
 class HitKeys(Resource):
     @pam_auth.login_required
@@ -58,8 +58,8 @@ class HitKeys(Resource):
                     success = False
                     key_code = None
         except GLib.Error:
-            return jsonify({'msg': 'lircd2uinput is not available'}), 503
+            return {'msg': 'lircd2uinput is not available'}, 503
         if success:
-            return jsonify({'msg': 'ok', 'keys': key}), 200
+            return {'msg': 'ok', 'keys': key}, 200
         else:
-            return jsonify({'msg': 'unknown key: {}'.format(key)}), 400
+            return {'msg': 'unknown key: {}'.format(key)}, 400
