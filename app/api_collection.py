@@ -53,6 +53,8 @@ class HitKeys(Resource):
                     for key in keys:
                         key = key.upper()
                         success, key_code = lircd2uinput.emit_key(key)
+                        if not success:
+                            break
                         time.sleep(.1)
                 else:
                     success = False
