@@ -40,11 +40,21 @@ def send_css(path):
 def send_fonts(path):
     return send_from_directory('static', os.path.join('fonts', path))
 
-@app.route('/index')
+@app.route('/images/<path:path>')
+def send_images(path):
+    return send_from_directory('static', os.path.join('images', path))
+
 @app.route('/')
 def index():
     return render_template('index.html', title='Home')
 
+@app.route('/api')
+def api_description():
+    return render_template('api.html', title='yaVDR API Documentation')
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return redirect(url_for('index'))
 #@app.route('/login', methods=['GET', 'POST'])
 #def login_auth():
 #    if request.method == 'POST':
