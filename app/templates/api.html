@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+    <link rel="stylesheet" href="css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="js/materialize.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <title>yaVDR Web API</title>
+    <style>textarea.materialize-textarea{height: 4rem;}
+      </style>
+    </head>
+
+<body>
+    <div class="container">
+        <h1>yaVDR Web API Documentation</h1>
+        <p class="flow-text">
+          yaVDR provides a (mostly) RESTful api service for status information and administrative purposes (which is used by the included web frontend).
+          This documentation should enable you to write own clients if you feel the need to integrate yaVDR in your environment.
+        </p>
+        <h2>How to use this API documentation</h2>
+        <p class="flow-text">You may browse the API routes without authentication, but if you wish to send requests to the API and see response data, you must authenticate. All routes return JSON data.
+        Obtain a session cookie by <code>POST</code>ing to the <code>/api/login/</code> route or a token by <code>POST</code>ing to the <code>/api/login/token</code> route with you local username and password.
+        </p>
+        
+        <div class="card">
+          <div class="card-content">
+            <span class="card-title"><h2>Authentication</h2></span>
+            <p class="flow-text">
+              Access is granted based on PAM authentication, so you can login with a local username and password. The groups of the user at login time are used to determine the permissions for protected routes. In order to gain full access, you user must be a member of the group <code>sudo</code>. Members of the group <code>adm</code> are allowed to use the <code>/api/log/</code> routes. All authenticated users are allowed to access the  <code>/api/hitkey/</code> route and access status information about the system and the vdr.
+            </p>
+            <ul class="collapsible" data-collapsible="expandable">
+               <li>
+                <div class="collapsible-header">
+                    <h5><code>/api/login</code></h5><span class="badge"><h5>POST</h5></span>
+                </div>
+                <div class="collapsible-body">
+                  <div class="section">
+                    <h4>Implementation Notes</h4>
+                    <p class="flow-text">
+                        Sending a <code>POST</code> request with correct login data on <code>/api/login</code> sets a session cookie.
+                    </p>
+                  </div>
+                  <div class="section">
+                    <h4>Parameters</h4>
+                    <h5>Parameter Content Type:</h5>
+                    <code>application/json</code>
+                    <p class="flow-text">
+                        You must send a JSON string using the following model schema:
+                        <pre><code>{
+  "username": "string",
+  "password": "string"
+}</code></pre>
+                    </p>
+                  </div>
+                  <div class="section">
+                    <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">Successfull authentication. A session cookie is set. Returns a JSON message:
+                      <pre><code>
+{
+  "msg": "login successfull"
+}</code></pre>
+                    </p>
+                    <h5>Status Code: <code>401</code></h5>
+                    <pre><code>
+{
+  "msg": "invalid username or password"
+}</code></pre>
+                  </div>
+                  
+                  <p class="flow-text">Try the form below to see the API call in action:</p>
+                    <div class="divider"></div>
+                    <div class="row">
+                        <form class="col s12">
+                          <div class="row">
+                            <div class="input-field col s6">
+                                <input type="text" id="username_input"><br>
+                                <label for="username_input">Username</label>
+                            </div>
+                            <div class="input-field col s6">
+                                <input type="password" id="password_input">
+                                <label for="password_input">Password</label>
+                            </div>
+                          </div>
+                          <button class="btn waves-effect waves-light" type="button" name="login" id="CookieLogin">
+                          Login (POST) <i class="material-icons right">send</i>
+                          </button>
+                        </form>
+                    </div>
+                    <p class="flow-text">sent JSON data:</p>
+                    <pre id="login_data"></pre>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="login_response"></pre>
+                    <p class="flow-text">Status Code: <code id="login_status_code"></code></p>
+                 </div>
+               </li>
+               <li>
+                 <div class="collapsible-header">
+                    <h5><code>/api/login</code></h5><span class="badge"><h5>GET</h5></span>
+                 </div>
+                 <div class="collapsible-body">
+                   <div class="section">
+                     <h4>Implementation Notes</h4>
+                     <p class="flow-text">
+                       Sending a <code>GET</code> request can be used to check if the session cookie
+                       (or the token obtained with the method below) is valid. 
+                     </p>
+                   </div>
+                   <div class="section">
+                     <h4>Parameters</h4>
+                     <p class="flow-text">None</p>
+                   </div>
+                   <div class="section">
+                     <h4>Response Messages</h4>
+                     <h5>Response Content Type:</h5>
+                     <code>application/json</code>
+                     <h5>Status Code: <code>200</code></h5>
+                     <p class="flow-text">Authentication successfull. Returns a JSON message with the following schema:
+                         <pre><code>{
+  "groups": [
+    [
+      "string",
+    ]
+  ],
+  "msg": "string",
+  "username": "string"
+}</code></pre>
+                      </p>
+                     <h5>Status Code: <code>401</code></h5>
+                     <pre><code>{
+  "msg": "invalid authorization, please log in and try again"
+}</code></pre>
+                     
+                   </div>
+                   
+                   <p class="flow-text">Try the form below to see the API calls in action:</p>
+                   <div class="divider"></div>
+                   <button class="btn waves-effect waves-light" type="button" name="checklogin" id="test">
+                     Check Login (GET) <i class="material-icons right">send</i>
+                   </button>
+                   <p class="flow-text">JSON response:</p>
+                   <pre id="login_state_response"></pre>
+                   <p class="flow-text">Status Code: <code id="login_state_status_code"></code></p>
+                 </div>
+               </li>
+               <li>
+                 <div class="collapsible-header"><h5><code>/api/login/token</code></h5><span class="badge"><h5>POST</h5></span></div>
+                 <div class="collapsible-body">
+                  <div class="section">
+                    <h4>Implementation Notes</h4>
+                    <p class="flow-text">
+                      Sending a <code>POST</code> request with correct login data on <code>/api/login/token</code> returns a token.
+                      You can validate the token with the <code>GET</code> method of <code>/api/login</code> (see above).
+                      In order to use the token for further API requests, you must send a header field with the token information:
+                      <pre>Authorization: Bearer YOUR_TOKEN</pre></p>
+                    <p class="flow-text">
+                      Using a token for authentication purposes is especially useful if you don't want to store session cookies or reuse the token on other clients. The following example shows how to obtain a token for a shell script using <code>curl</code> and <code>jq</code>:
+                    </p>
+                    <pre><code>
+token=$(curl -X POST -H "Content-Type: application/json" \
+        -d '{"username": "USERNAME", "password": "PASSWORD"}' \
+        http://localhost:5000/api/login/token | jq -r '.token')</code></pre>
+                    <p class="flow-text">
+                      The obtained token can be used to access protected API routes, e.g.:
+                    </p>
+                    <pre><code>
+curl -X GET -H "Content-Type: application/json" \
+     -H "Authorization: Bearer $token" \
+     http://localhost:5000/api/login</code></pre>
+                  </div>
+                  <div class="section">
+                    <h4>Parameters</h4>
+                    <p class="flow-text">
+                        You must send a JSON string using the following model schema:
+                        <pre><code>{
+  "username": "string",
+  "password": "string"
+}</code></pre>
+                    </p>
+                    <h5>Parameter Content Type:</h5>
+                    <code>application/json</code>
+                  </div>
+                  <div class="section">
+                    <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">If authentication is successfull, a token is returned:</p>
+                    <pre><code>{
+  "msg": "login successfull"
+  "token": "string"                            
+}</code></pre>
+                    <h5>Status Code: <code>401</code></h5>
+                    <pre><code>{
+  "message": "invalid username or password"
+}</code></pre>
+                  </div>
+                    <p class="flow-text">
+                      </br>Use the form and the buttons below to try it:
+                    </p>
+                    <div class="divider"></div>
+                    <div class="row">
+                        <form class="col s12">
+                          <div class="row">
+                            <div class="input-field col s6">
+                                <input type="text" id="username_token_input"><br>
+                                <label for="username_token_input">Username</label>
+                            </div>
+                            <div class="input-field col s6">
+                                <input type="password" id="password_token_input">
+                                <label for="password_token_input">Password</label>
+                            </div>
+                          </div>
+                            <button class="btn waves-effect waves-light" type="button" name="login_token" id="TokenLogin">
+                            Login (POST) <i class="material-icons right">send</i>
+                            </button>
+                            <button class="btn tooltipped waves-effect waves-light"
+                                    type="button" name="token_delete" id="Tokenlogout"
+                                    data-delay="50" data-position="top" data-tooltip="delete local storage">
+                              Delete Token
+                            </button>
+                        </form>
+                    </div>
+                    <p class="flow-text">login JSON data:</p>
+                    <pre id="login_token_data" readonly></pre>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="login_token_response"></pre>
+                    <p class="flow-text">Status Code: <code id="login_token_status_code"></code></p>
+                 </div>
+               </li>
+               <li>
+                 <div class="collapsible-header">
+                    <code><h5>/api/logout</code></h5><span class="badge"><h5>GET POST</h5></span>
+                 </div>
+                 <div class="collapsible-body">
+                    <p class="flow-text">
+                      Calling this route invalidates the session cookie.<br>
+                      </br>Press the button below to try it:
+                    </p>
+                    <button class="btn waves-effect waves-light" type="button" name="token_delete" id="logout">Logout</button>
+               </li>
+             </ul>
+          </div>
+        </div>
+        <div class="card"</div>
+          <div class="card-content">
+            <span class="card-title"><h2>Remote Control</h2></span>
+            <ul class="collapsible" data-collapsible="expandable">
+              <li>
+                <div class="collapsible-header">
+                  <h5><code>/api/hitkey</code></h5>
+                  <span class="badge"><h5>POST</h5></span>
+                </div>
+                <div class="collapsible-body">
+                  <p class="flow-text">
+                    <code>/api/hitkey</code> allows you to send key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API). KEY_NAME (see below) can be any of the key definitions supported by linux (<a href="https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h#L75">see input-event-codes.h</a>).
+                  </p>
+                  <div class="section">
+                    <h4>Parameters</h4>
+                    <p class="flow-text">
+                        You must send a JSON string using the following schema:
+                        <pre><code>{
+  "key": "KEY_NAME",
+}</code></pre>
+                 </p>
+                 <h5>Parameter Content Type:</h5>
+                 <code>application/json</code>
+                </div>
+                <div class="section">
+                  <h4>Response Messages</h4>
+                  <h5>Response Content Type:</h5>
+                  <code>application/json</code>
+                  <h5>Status Code: <code>200</code></h5>
+                  <p class="flow-text">Authentication successfull. Returns a JSON message with the following schema:
+                      <pre><code>{
+  "msg": "ok",
+  "key": "KEY_NAME"
+}</code></pre>
+                  </p>
+                  <h5>Status Code: <code>400</code></h5>
+                  Invalid KEY_NAME
+                  <pre><code>{
+  "msg": "unknown key: KEY_NAME"
+}</code></pre>
+                  
+                  <h5>Status Code: <code>401</code></h5>
+                  <pre><code>{
+  "msg": "invalid authorization, please log in and try again"
+}</code></pre>
+                  
+                  <h5>Status Code: <code>503</code></h5>
+                  <pre><code>{
+  "msg": "lircd2uinput is not available"
+}</code></pre>
+                </div>
+
+                <div class="card">
+                  <div class="card-content">
+                    <div class="row">
+                      <div class="col s4">
+                        <div class="col s1 push-s1">
+                          <a name="KEY_POWER2" class="remote waves-effect waves-light btn-large btn-floating red">
+                            <i class="material-icons">power_settings_new</i>
+                          </a>
+                        </div>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_PROG2" class="remote waves-effect waves-light btn-large col s10 push-s1">Mediacenter</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_PROG1" class="remote waves-effect waves-light btn-large col s10 push-s1">VDR</a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_REWIND" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">fast_rewind</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_PLAY" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">play_arrow</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_FASTFORWARD" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">fast_forward</i>
+                        </a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_BACK" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">skip_previous</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_PAUSE" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">pause</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_NEXT" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">skip_next</i>
+                        </a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_RECORD" class="remote waves-effect waves-light btn-large col s10 push-s1 red darken-4">
+                          <i class="material-icons">fiber_manual_record</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_STOP" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">stop</i>
+                        </a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_INFO" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">
+                          <i class="material-icons">info</i>
+                        </a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4 left-align">
+                          <a name="KEY_MUTE" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                            <i class="material-icons">volume_off</i>
+                          </a>
+                        </div>
+                        <div class="col s4"></div>
+                      </div>
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_UP" class="remote waves-effect waves-light btn-floating btn-large red center-align">
+                            <i class="material-icons">arrow_upward</i>
+                          </a>
+                        </div>
+                        <div class="col s4"></div>
+                      </div>
+                      <div class="col s4"></div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4">
+                          <a name="KEY_VOLUMEUP" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                            <i class="material-icons">volume_up</i>
+                          </a>
+                        </div>
+                        <div class="col s4"></div>
+                      </div>
+                      <div class="col s4">
+                        <div class="col s4 center-align">
+                          <a name="KEY_LEFT" class="remote waves-effect waves-light btn-floating btn-large red">
+                            <i class="material-icons">arrow_back</i>
+                          </a>
+                        </div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_OK" class="remote waves-effect waves-light btn-floating btn-large red">
+                            <i class="material-icons">location_searching</i>
+                          </a>
+                        </div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_RIGHT" class="remote waves-effect waves-light btn-floating btn-large red"><i class="material-icons">arrow_forward</i></a>
+                        </div>
+                      </div>
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_CHANNELUP" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                            <i class="material-icons">keyboard_arrow_up</i>
+                          </a>
+                        </diV>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4">
+                          <a name="KEY_VOLUMEDOWN" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                            <i class="material-icons">volume_down</i>
+                          </a>
+                        </div>
+                      </div>
+                      <div class="col s4">
+                        <div class="col s4 center-align">
+                          <a name="KEY_ESC" class="remote waves-effect waves-light btn-floating btn-large red"><i class="material-icons">subdirectory_arrow_left</i></a>
+                        </div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_DOWN" class="remote waves-effect waves-light btn-floating btn-large red">
+                            <i class="material-icons">arrow_downward</i>
+                          </a>
+                        </div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_MENU" class="remote waves-effect waves-light btn-floating btn-large red">
+                            <i class="material-icons">menu</i>
+                          </a>
+                        </div>
+                        <!-- <div class="col s4"></div> -->
+                      </div>
+                      <div class="col s4">
+                        <div class="col s4"></div>
+                        <div class="col s4 center-align">
+                          <a name="KEY_CHANNELDOWN" class="remote waves-effect waves-light btn-floating btn-large light-blue darken-3">
+                            <i class="material-icons">keyboard_arrow_down</i>
+                          </a>
+                        </div>
+                        <div class="col s4"></div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s3">
+                        <a name="KEY_RED" class="remote waves-effect waves-light btn-large col s10 push-s1 red"></a>
+                      </div>
+                      <div class="col s3">
+                        <a name="KEY_GREEN" class="remote waves-effect waves-light btn-large col s10 push-s1 green"></a>
+                      </div>
+                      <div class="col s3">
+                        <a name="KEY_YELLOW" class="remote waves-effect waves-light btn-large col s10 push-s1 yellow"></a>
+                      </div>
+                      <div class="col s3">
+                        <a name="KEY_BLUE" class="remote waves-effect waves-light btn-large col s10 push-s1 blue darken-2"></a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_1" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">1</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_2" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">2</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_3" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">3</a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_4" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">4</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_5" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">5</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_6" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">6</a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <a name="KEY_7" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">7</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_8" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">8</a>
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_9" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">9</a>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col s4">
+                        <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                      </div>
+                      <div class="col s4">
+                        <a name="KEY_0" class="remote waves-effect waves-light btn-large col s10 push-s1 light-blue darken-4">0</a>
+                      </div>
+                      <div class="col s4">
+                        <!-- <a class="waves-effect waves-light btn-large col s10 light-blue lighten-5"></a> -->
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </li>
+            <li>
+              <div class="collapsible-header">
+                 <code><h5>/api/hitkeys</code></h5><span class="badge"><h5>POST</h5></span>
+              </div>
+              <div class="collapsible-body">
+                <p class="flow-text">
+                  <code>/api/hitkeys</code> allows you to send a list of key presses to lircd2uinput which forwards them to eventlircd (so you can control VDR and KODI using the same API). KEY_NAME can be any of the key definitions supported by linux (<a href="https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h#L75">see input-event-codes.h</a>)
+                </p>
+                <div class="section">
+                  <h4>Parameters</h4>
+                  <p class="flow-text">
+                      You must send a JSON string using the following model schema:
+                      <pre><code>{
+  "keys": ["KEY_NAME", "KEY_NAME"]
+}</code></pre>
+                  </p>
+                  <h5>Parameter Content Type:</h5>
+                  <code>application/json</code>
+                </div>
+                <div class="section">
+                  <h4>Response Messages</h4>
+                  <h5>Response Content Type:</h5>
+                  <code>application/json</code>
+                  <h5>Status Code: <code>200</code></h5>
+                  <p class="flow-text">Authentication successfull. Returns a JSON message with the following schema:
+                      <pre><code>{
+  "msg": "ok",
+  "keys": ["KEY_NAME", "KEY_NAME"]
+}</code></pre>
+                  </p>
+                  <h5>Status Code: <code>400</code></h5>
+                  Invalid KEY_NAME in list
+                  <pre><code>{
+  "msg": "unknown key: KEY_NAME"
+}</code></pre>
+                  
+                  <h5>Status Code: <code>401</code></h5>
+                  <pre><code>{
+  "msg": "invalid authorization, please log in and try again"
+}</code></pre>
+                  
+                  <h5>Status Code: <code>503</code></h5>
+                  <pre><code>{
+  "msg": "lircd2uinput is not available"
+}</code></pre>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="card"</div>
+          <div class="card-content">
+            <span class="card-title"><h2>System</h2></span>
+            <p class="flow-text">
+              <code>GET /api/system/status</code> returns a JSON object containing various informations about the system status like cpu load, memory usage, temperatures and fanspeeds (if supported by lm-sensors), uptime etc.
+            </p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-content">
+            <span class="card-title"><h2>VDR Status Information</h2></span>
+            <p class="flow-text">
+              Accessing vdr status information is done by proxying calls to the dbus2vdr plugin. Authentication is required to access any of the following routes.
+            </p>
+            <ul class="collapsible" data-collapsible="expandable">
+               <li>
+                 <div class="collapsible-header">
+                   <h5><code>/api/vdr/plugins</code></h5>
+                   <span class="badge"><h5>GET</h5></span>
+                 </div>
+                 <div class="collapsible-body">
+                   <div class="section">
+                     <h4>Implementation Notes</h4>
+                     <p class="flow-text">
+                       Returns a list of currently loaded vdr plugins with version information.
+                     </p>
+                   </div>
+                   <div class="section">
+                     <h4>Parameters:</h4>
+                     <h5>None</h5>
+                   </div>
+                   <div class="section">
+                     <h4>Response Messages</h4>
+                     <h5>Response Content Type:</h5>
+                     <code>application/json</code>
+                     <h5>Status Code: <code>200</code></h5>
+                     <p class="flow-text">Successfull authentication. A list of currently loaded plugins is returned as a JSON message, e.g.:
+                       <pre><code>[
+    {
+        "name":  "dbus2vdr",
+        "version ": "31"
+    }
+]</code></pre>
+                     </p>
+                     <h5>Status Code: <code>401</code></h5>
+                     <p class="flow-text">Authentication failed.</p>
+                     <h5>Status Code: <code>503</code></h5>
+                     <p class="flow-text">Connection to dbus2vdr failed.</p>
+                   </div>
+                   <p class="flow-text">Press the button below to see the API call in action:</p>
+                     <div class="divider"></div>
+                     <div class="row">
+                           <a id="vdr_plugins" class="btn waves-effect waves-light" type="button" name="login" id="CookieLogin">
+                           List Plugins (GET) <i class="material-icons right">send</i>
+                           </a>
+                         </form>
+                     </div>
+                     <p class="flow-text">JSON response:</p>
+                     <pre id="vdr_plugins_response"></pre>
+                     <p class="flow-text">
+                       Status Code: <code id="vdr_plugins_status_code"></code>
+                     </p>
+                  </div>
+               </li>
+               <li>
+                 <div class="collapsible-header">
+                    <h5><code>/api/vdr/timers</code></h5><span class="badge"><h5>GET</h5></span>
+                 </div>
+                 <div class="collapsible-body">
+                  <div class="section">
+                    <h4>Implementation Notes</h4>
+                    <p class="flow-text">
+                      Returns a list of vdr's timers.
+                    </p>
+                  </div>
+                  <div class="section">
+                    <h4>Parameters:</h4>
+                    <h5>None</h5>
+                  </div>
+                  <div class="section">
+                    <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
+                      <pre><code>[
+  {
+    "raw": "1:T-8468-12291-772:2018-02-06:1958:2025:50:99:Tagesschau:",
+    "status": 1,
+    "channel": "T-8468-12291-772",
+    "day": "2018-02-06",
+    "start": 1958,
+    "stop": 2025,
+    "priority": 50,
+    "lifetime": 99,
+    "filename": "Tagesschau",
+    "aux": ""
+  }
+]</code></pre>
+                    </p>
+                    <h5>Status Code: <code>401</code></h5>
+                    <p class="flow-text">Authentication failed.</p>
+                    <h5>Status Code: <code>503</code></h5>
+                    <p class="flow-text">Connection to dbus2vdr failed.</p>
+                  </div>
+                  <p class="flow-text">Press the button below to see the API call in action:</p>
+                    <div class="divider"></div>
+                    <div class="row">
+                          <a id="vdr_timers" class="btn waves-effect waves-light" type="button">
+                          List Timers (GET) <i class="material-icons right">send</i>
+                          </a>
+                        </form>
+                    </div>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="vdr_timers_response"></pre>
+                    <p class="flow-text">
+                      Status Code: <code id="vdr_timers_status_code"></code>
+                    </p>
+                 </div>
+               </li>
+               <li>
+                 <div class="collapsible-header">
+                   <h5><code>/api/vdr/recordings</code></h5>
+                   <span class="badge"><h5>GET</h5></span></div>
+                 <div class="collapsible-body">
+                 </div>
+                 <div class="collapsible-body">
+                  <div class="section">
+                    <h4>Implementation Notes</h4>
+                    <p class="flow-text">
+                      Returns a list of vdr's recordings.
+                    </p>
+                  </div>
+                  <div class="section">
+                    <h4>Parameters:</h4>
+                    <h5>None</h5>
+                  </div>
+                  <div class="section">
+                    <h4>Response Messages</h4>
+                    <h5>Response Content Type:</h5>
+                    <code>application/json</code>
+                    <h5>Status Code: <code>200</code></h5>
+                    <p class="flow-text">Successfull authentication. A list of recordings is returned as a JSON message, e.g.:
+                      <pre><code>[
+    {
+        "RecNum": 1,
+        "Path": "/srv/vdr/video/heute-journal/2017-01-30.22.23.16-0.rec",
+        "Name": "heute-journal",
+        "FullName": "heute-journal",
+        "Title": "30.01.17 22:23  heute-journal",
+        "Start": 1485811380,
+        "Priority": 50,
+        "Lifetime": 99,
+        "HierarchyLevels": 0,
+        "FramesPerSecond": 50.02779322,
+        "NumFrames": 98897,
+        "LengthInSeconds": 1976,
+        "FileSizeMB": 647,
+        "IsPesRecording": false,
+        "IsNew": true,
+        "IsEdited": false,
+        "Info/ChannelID": "T-8468-16481-16961",
+        "Info/ChannelName": "ZDF HD",
+        "Info/Title": "heute-journal",
+        "Info/ShortText": "Wetter",
+        "Info/Description": "Wohin steuern die USA? - Die Executive Orders des Donald Trump\nDie NATO-Man\u00f6ver in Polen - Muskelspiele gegen\u00fcber Putin\nBahnchef Grube schmei\u00dft hin - Die Lage der Bahn AG Moderation: Marietta Slomka\nHD-Produktion",
+        "Info/FramesPerSecond": 50.02779322,
+        "Info/Component/0/stream": 2,
+        "Info/Component/0/type": 3,
+        "Info/Component/0/language": "deu",
+        "Info/Component/0/description": "Stereo",
+        "Info/Component/1/stream": 2,
+        "Info/Component/1/type": 3,
+        "Info/Component/1/language": "mul",
+        "Info/Component/1/description": "ohne Originalton",
+        "Info/Component/2/stream": 2,
+        "Info/Component/2/type": 3,
+        "Info/Component/2/language": "mis",
+        "Info/Component/2/description": "ohne Audiodeskription",
+        "Info/Component/3/stream": 2,
+        "Info/Component/3/type": 3,
+        "Info/Component/3/language": "deu",
+        "Info/Component/3/description": "Dolby Digital 2.0",
+        "Info/Component/4/stream": 5,
+        "Info/Component/4/type": 11,
+        "Info/Component/4/language": "deu",
+        "Info/Component/4/description": "HDTV",
+        "Info/Component/5/stream": 3,
+        "Info/Component/5/type": 16,
+        "Info/Component/5/language": "deu",
+        "Info/Component/5/description": "DVB-Untertitel",
+        "Info/Component/6/stream": 2,
+        "Info/Component/6/type": 5,
+        "Info/Component/6/language": "deu"
+    }
+]</code></pre>
+                    </p>
+                    <h5>Status Code: <code>401</code></h5>
+                    <p class="flow-text">Authentication failed.</p>
+                    <h5>Status Code: <code>503</code></h5>
+                    <p class="flow-text">Connection to dbus2vdr failed.</p>
+                  </div>
+                  <p class="flow-text">Press the button below to see the API call in action:</p>
+                    <div class="divider"></div>
+                    <div class="row">
+                          <a id="vdr_recordings" class="btn waves-effect waves-light" type="button">
+                          List Recordings (GET) <i class="material-icons right">send</i>
+                          </a>
+                        </form>
+                    </div>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="vdr_recordings_response"></pre>
+                    <p class="flow-text">
+                      Status Code: <code id="vdr_recordings_status_code"></code>
+                    </p>
+                 </div>
+               </li>
+               <li>
+                 <div class="collapsible-header">
+                   <code><h5>/api/vdr/status</code></h5>
+                   <span class="badge"><h5>GET</h5></span>
+                 </div>
+                 <div class="collapsible-body">
+                    <p class="flow-text">
+                      TODO: implement route</br>
+                      TODO: Write description</br>
+                      Returns: vdr running status, IsReplaying (maybe cache signals in the backend?)</br>
+                      IDEA: SSE for Status changes?
+                    </p>
+                    <button class="btn waves-effect waves-light" type="button" name="token_delete" id="vdr_status">VDR status (GET)</button>
+               </li>
+             </ul>
+          </div>
+        </div>
+          
+                 
+  <script type="text/javascript">
+  $(document).ready(function() {
+    $('#test').click(function() {
+      $.ajax({
+        type: 'GET',
+        url: '/api/login',
+        <!--contentType: 'application/json; charset=UTF-8',-->
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          Materialize.toast("Hello " + data.username + "!<br>You are authenticated.", 4000, "rounded");
+        },
+        error: function() {
+          Materialize.toast("Sorry, you are not logged in.", 4000);
+        },
+        complete: function(data) {
+          $('#login_state_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#login_state_status_code').text(data.status);
+        },
+      });
+    });
+    $('#CookieLogin').click(function() {
+      $.ajax({
+        type: "POST",
+        url: "/api/login",
+        contentType: 'application/json; charset=UTF-8',
+        dataType: 'json',
+        data: JSON.stringify({
+          "username": $('#username_input').val(),
+          "password": $('#password_input').val()
+        }),
+        beforeSend: function() {
+          $('#login_data').text(JSON.stringify({
+          "username": $('#username_input').val(),
+          "password": $('#password_input').val()
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text('Got a session cookie from the server!');
+          Materialize.toast('Login successfull.', 4000, 'rounded')
+        },
+        error: function(data) {
+          Materialize.toast('Login failed.', 4000)
+        },
+        complete: function(data) {
+          $('#login_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#login_status_code').text(data.status);
+        },
+      });
+    });
+    $('#TokenLogin').click(function() {
+      $.ajax({
+        type: "POST",
+        url: "/api/login/token",
+        contentType: 'application/json; charset=UTF-8',
+        dataType: 'json',
+        data: JSON.stringify({
+          "username": $('#username_token_input').val(),
+          "password": $('#password_token_input').val()
+        }),
+        beforeSend: function() {
+          $('#login_token_data').text(JSON.stringify({
+          "username": $('#username_token_input').val(),
+          "password": $('#password_token_input').val()
+           }, null, 2));
+        },
+        success: function(data) {
+          localStorage.token = data.token;
+          Materialize.toast('Login successfull.', 4000, 'rounded')
+        },
+        error: function() {
+          Materialize.toast('Login failed.', 4000)
+        },
+        complete: function(data) {
+          $('#login_token_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#login_token_status_code').text(data.status);
+        },
+      });
+    });
+
+    $('#logout').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/logout",
+      })
+      $('#login_result').text("Logged out.");
+    });
+    $('#Tokenlogout').click(function() {
+      localStorage.clear();
+      Materialize.toast('Deleted local storage.', 4000)
+    });
+
+    $('.remote').click(function() {
+      $.ajax({
+        type: "POST",
+        url: "/api/hitkey",
+        contentType: 'application/json; charset=UTF-8',
+        dataType: 'json',
+        data: JSON.stringify({
+          "key": $( this ).attr("name"),
+        }),
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text("hitkey:" + data.msg);
+          Materialize.toast('pressed key ' + data.key, 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 503) {
+            Materialize.toast('lircd2uinput is not available', 4000, 'rounded');
+          } else if (jqXHR.status == 400) {
+            Materialize.toast('invalid key' + data.key, 4000, 'rounded');
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded');
+          }
+        },
+      })
+    });
+
+    $('#vdr_plugins').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/api/vdr/plugins",
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text(data);
+          
+          Materialize.toast('loaded plugin information', 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 503) {
+            Materialize.toast('dbus2vdr is not available', 4000, 'rounded')
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+        complete: function(data) {
+          $('#vdr_plugins_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#vdr_plugins_status_code').text(data.status);
+        },
+      })
+    });
+    $('#vdr_timers').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/api/vdr/timers",
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text(data);
+          
+          Materialize.toast('loaded timer information', 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 503) {
+            Materialize.toast('dbus2vdr is not available', 4000, 'rounded')
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+        complete: function(data) {
+          $('#vdr_timers_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#vdr_timers_status_code').text(data.status);
+        },
+      })
+    });
+
+    $('#vdr_recordings').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/api/vdr/recordings",
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text(data);
+          
+          Materialize.toast('loaded recordings information', 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 503) {
+            Materialize.toast('dbus2vdr is not available', 4000, 'rounded')
+          } else if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+        complete: function(data) {
+          $('#vdr_recordings_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#vdr_recordings_status_code').text(data.status);
+        },
+      })
+    });
+
+  });
+  </script>
+</body>
+
+</html>
