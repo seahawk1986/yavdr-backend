@@ -49,9 +49,12 @@ def index():
     return render_template('index.html', title='Home')
 
 @app.route('/api')
-def index():
+def api_description():
     return render_template('api.html', title='yaVDR API Documentation')
 
+@app.errorhandler(404)
+def page_not_found(error):
+    return redirect(url_for('index'))
 #@app.route('/login', methods=['GET', 'POST'])
 #def login_auth():
 #    if request.method == 'POST':
