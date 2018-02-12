@@ -41,7 +41,7 @@ def send_fonts(path):
     return send_from_directory('static', os.path.join('fonts', path))
 
 @app.route('/images/<path:path>')
-def send_fonts(path):
+def send_images(path):
     return send_from_directory('static', os.path.join('images', path))
 
 @app.route('/')
