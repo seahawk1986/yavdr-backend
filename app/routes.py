@@ -44,6 +44,10 @@ def send_fonts(path):
 def send_images(path):
     return send_from_directory('static', os.path.join('images', path))
 
+@app.route('/favicon.ico')
+def send_favicon():
+    return send_from_directory('static', 'favicon.ico')
+
 @app.route('/')
 def index():
     return render_template('index.html', title='Home')
