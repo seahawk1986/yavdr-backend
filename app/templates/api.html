@@ -1,18 +1,5 @@
-<!DOCTYPE html>
-<html>
-    <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
-    <link rel="stylesheet" href="css/materialize.min.css">
-    <!-- Compiled and minified JavaScript -->
-    <script src="js/materialize.min.js"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <title>yaVDR Web API</title>
-    <style>textarea.materialize-textarea{height: 4rem;}
-      </style>
-    </head>
-
-<body>
+{% extends "layout.html" %}
+{% block body %}
     <div class="container">
       <div class="row">
         <div class="col s12">
@@ -67,7 +54,7 @@
                             <pre><code>{
     "username": "string",
     "password": "string"
-    }</code></pre>
+}</code></pre>
                         </p>
                     </div>
                     <div class="section">
@@ -76,16 +63,14 @@
                         <code>application/json</code>
                         <h5>Status Code: <code>200</code></h5>
                         <p class="flow-text">Successfull authentication. A session cookie is set. Returns a JSON message:
-                        <pre><code>
-    {
+                        <pre><code>{
     "msg": "login successfull"
-    }</code></pre>
+}</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
-                        <pre><code>
-    {
+                        <pre><code>{
     "msg": "invalid username or password"
-    }</code></pre>
+}</code></pre>
                     </div>
 
                     <p class="flow-text">Try the form below to see the API call in action:</p>
@@ -144,12 +129,12 @@
     ],
     "msg": "string",
     "username": "string"
-    }</code></pre>
+}</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
                         <pre><code>{
     "msg": "invalid authorization, please log in and try again"
-    }</code></pre>
+}</code></pre>
 
                     </div>
 
@@ -177,9 +162,9 @@
                         Using a token for authentication purposes is especially useful if you don't want to store session cookies or reuse the token on other clients. The following example shows how to obtain a token for a shell script using <code>curl</code> and <code>jq</code>:
                         </p>
                         <pre><code>
-    token=$(curl -X POST -H "Content-Type: application/json" \
-            -d '{"username": "USERNAME", "password": "PASSWORD"}' \
-            http://localhost:5000/api/login/token | jq -r '.token')</code></pre>
+token=$(curl -X POST -H "Content-Type: application/json" \
+        -d '{"username": "USERNAME", "password": "PASSWORD"}' \
+        http://localhost:5000/api/login/token | jq -r '.token')</code></pre>
                         <p class="flow-text">
                         The obtained token can be used to access protected API routes, e.g.:
                         </p>
@@ -195,7 +180,7 @@
                             <pre><code>{
     "username": "string",
     "password": "string"
-    }</code></pre>
+}</code></pre>
                         </p>
                         <h5>Parameter Content Type:</h5>
                         <code>application/json</code>
@@ -209,11 +194,11 @@
                         <pre><code>{
     "msg": "login successfull"
     "token": "string"                            
-    }</code></pre>
+}</code></pre>
                         <h5>Status Code: <code>401</code></h5>
                         <pre><code>{
     "message": "invalid username or password"
-    }</code></pre>
+}</code></pre>
                     </div>
                         <p class="flow-text">
                         </br>Use the form and the buttons below to try it:
@@ -592,92 +577,156 @@
         <div class="card"</div>
           <div class="card-content">
             <span class="card-title"><h2>System</h2></span>
-            <p class="flow-text">
-              <code>GET /api/system/status</code> returns a JSON object containing various informations about the system status like cpu load, memory usage, temperatures and fanspeeds (if supported by lm-sensors), uptime etc.
-            </p>
+            <ul class="collapsible" data-collapsible="expandable">
+              <li>
+                <div class="collapsible-header">
+                    <h5><code>/system/status</code></h5><span class="badge"><h5>GET</h5></span>
+                </div>
+                <div class="collapsible-body">
+                    <p class="flow-text">
+                        <code>GET /api/system/status</code> returns a JSON object containing various informations about the system status like cpu load, memory usage, temperatures and fanspeeds (if supported by lm-sensors), uptime etc.
+                    </p>
+                    <div class="section">
+                        <h4>Implementation Notes</h4>
+                        <p class="flow-text">
+                          Sending a <code>GET</code> request returns a JSON Object containing various system information. For temperatures and fan speeds you need to configure <a href="https://wiki.ubuntuusers.de/Lm_sensors/" >lm-sensors</a> first.
+                        </p>
+                    </div>
+                    <div class="section">
+                        <h4>Parameters</h4>
+                        <p class="flow-text">None</p>
+                    </div>
+                    <div class="section">
+                        <h4>Response Messages</h4>
+                        <h5>Response Content Type:</h5>
+                        <code>application/json</code>
+                        <h5>Status Code: <code>200</code></h5>
+                        <p class="flow-text">Authentication successfull. Returns a JSON Object with the following attributes:
+                            <pre><code>{
+    "cpu_usage": [
+    ],
+    "cpu_num": 2,
+    "load_average": [
+    ],
+    "disk_usage": [
+    ],
+    "memory_usage": {
+    },
+    "swap_usage": {
+    },
+    "temperatures": {
+    },
+    "fans": {
+    },
+    "release": [
+    ],
+    "kernel": "4.13.0-32-generic",
+    "system_alias": [
+    ],
+    "uptime": "1 day, 23:11:40"
+}</code></pre>
+                        </p>
+                        <h5>Status Code: <code>401</code></h5>
+                        <pre><code>{
+    "msg": "invalid authorization, please log in and try again"
+}</code></pre>
+
+                    </div>
+
+                    <p class="flow-text">Try the form below to see the API calls in action:</p>
+                    <div class="divider"></div>
+                    <button class="btn waves-effect waves-light" type="button" name="checklogin" id="get_system_status">
+                        GET System Status <i class="material-icons right">send</i>
+                    </button>
+                    <p class="flow-text">JSON response:</p>
+                    <pre id="system_status_response"></pre>
+                    <p class="flow-text">Status Code: <code id="system_status_status_code"></code></p>
+                  </div>
+                </div>
+              </li>
+            </ul>
           </div>
-        </div>
         </div>
 
         <div id="vdr" class="col s12">
-        <div class="card">
-          <div class="card-content">
-            <span class="card-title"><h2>VDR Status Information</h2></span>
-            <p class="flow-text">
-              Accessing vdr status information is done by proxying calls to the dbus2vdr plugin. Authentication is required to access any of the following routes.
-            </p>
-            <ul class="collapsible" data-collapsible="expandable">
-               <li>
-                 <div class="collapsible-header">
-                   <h5><code>/api/vdr/plugins</code></h5>
-                   <span class="badge"><h5>GET</h5></span>
-                 </div>
-                 <div class="collapsible-body">
-                   <div class="section">
-                     <h4>Implementation Notes</h4>
-                     <p class="flow-text">
-                       Returns a list of currently loaded vdr plugins with version information.
-                     </p>
+          <div class="card">
+            <div class="card-content">
+              <span class="card-title"><h2>VDR Status Information</h2></span>
+              <p class="flow-text">
+                Accessing vdr status information is done by proxying calls to the dbus2vdr plugin. Authentication is required to access any of the following routes.
+              </p>
+              <ul class="collapsible" data-collapsible="expandable">
+                 <li>
+                   <div class="collapsible-header">
+                     <h5><code>/api/vdr/plugins</code></h5>
+                     <span class="badge"><h5>GET</h5></span>
                    </div>
-                   <div class="section">
-                     <h4>Parameters:</h4>
-                     <h5>None</h5>
-                   </div>
-                   <div class="section">
-                     <h4>Response Messages</h4>
-                     <h5>Response Content Type:</h5>
-                     <code>application/json</code>
-                     <h5>Status Code: <code>200</code></h5>
-                     <p class="flow-text">Successfull authentication. A list of currently loaded plugins is returned as a JSON message, e.g.:
-                       <pre><code>[
+                   <div class="collapsible-body">
+                     <div class="section">
+                       <h4>Implementation Notes</h4>
+                       <p class="flow-text">
+                         Returns a list of currently loaded vdr plugins with version information.
+                       </p>
+                     </div>
+                     <div class="section">
+                       <h4>Parameters:</h4>
+                       <h5>None</h5>
+                     </div>
+                     <div class="section">
+                       <h4>Response Messages</h4>
+                       <h5>Response Content Type:</h5>
+                       <code>application/json</code>
+                       <h5>Status Code: <code>200</code></h5>
+                       <p class="flow-text">Successfull authentication. A list of currently loaded plugins is returned as a JSON message, e.g.:
+                         <pre><code>[
     {
         "name":  "dbus2vdr",
         "version ": "31"
     }
 ]</code></pre>
-                     </p>
-                     <h5>Status Code: <code>401</code></h5>
-                     <p class="flow-text">Authentication failed.</p>
-                     <h5>Status Code: <code>503</code></h5>
-                     <p class="flow-text">Connection to dbus2vdr failed.</p>
-                   </div>
-                   <p class="flow-text">Press the button below to see the API call in action:</p>
-                     <div class="divider"></div>
-                     <div class="row">
-                           <a id="vdr_plugins" class="btn waves-effect waves-light" type="button" name="login" id="CookieLogin">
-                           List Plugins (GET) <i class="material-icons right">send</i>
-                           </a>
-                         </form>
+                       </p>
+                       <h5>Status Code: <code>401</code></h5>
+                       <p class="flow-text">Authentication failed.</p>
+                       <h5>Status Code: <code>503</code></h5>
+                       <p class="flow-text">Connection to dbus2vdr failed.</p>
                      </div>
-                     <p class="flow-text">JSON response:</p>
-                     <pre id="vdr_plugins_response"></pre>
-                     <p class="flow-text">
-                       Status Code: <code id="vdr_plugins_status_code"></code>
-                     </p>
-                  </div>
-               </li>
-               <li>
-                 <div class="collapsible-header">
-                    <h5><code>/api/vdr/timers</code></h5><span class="badge"><h5>GET</h5></span>
-                 </div>
-                 <div class="collapsible-body">
-                  <div class="section">
-                    <h4>Implementation Notes</h4>
-                    <p class="flow-text">
-                      Returns a list of vdr's timers.
-                    </p>
-                  </div>
-                  <div class="section">
-                    <h4>Parameters:</h4>
-                    <h5>None</h5>
-                  </div>
-                  <div class="section">
-                    <h4>Response Messages</h4>
-                    <h5>Response Content Type:</h5>
-                    <code>application/json</code>
-                    <h5>Status Code: <code>200</code></h5>
-                    <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
-                      <pre><code>[
+                     <p class="flow-text">Press the button below to see the API call in action:</p>
+                       <div class="divider"></div>
+                       <div class="row">
+                             <a id="vdr_plugins" class="btn waves-effect waves-light" type="button" name="login" id="CookieLogin">
+                             List Plugins (GET) <i class="material-icons right">send</i>
+                             </a>
+                           </form>
+                       </div>
+                       <p class="flow-text">JSON response:</p>
+                       <pre id="vdr_plugins_response"></pre>
+                       <p class="flow-text">
+                         Status Code: <code id="vdr_plugins_status_code"></code>
+                       </p>
+                    </div>
+                 </li>
+                 <li>
+                   <div class="collapsible-header">
+                      <h5><code>/api/vdr/timers</code></h5><span class="badge"><h5>GET</h5></span>
+                   </div>
+                   <div class="collapsible-body">
+                    <div class="section">
+                      <h4>Implementation Notes</h4>
+                      <p class="flow-text">
+                        Returns a list of vdr's timers.
+                      </p>
+                    </div>
+                    <div class="section">
+                      <h4>Parameters:</h4>
+                      <h5>None</h5>
+                    </div>
+                    <div class="section">
+                      <h4>Response Messages</h4>
+                      <h5>Response Content Type:</h5>
+                      <code>application/json</code>
+                      <h5>Status Code: <code>200</code></h5>
+                      <p class="flow-text">Successfull authentication. A list of timers is returned as a JSON message, e.g.:
+                        <pre><code>[
   {
     "raw": "1:T-8468-12291-772:2018-02-06:1958:2025:50:99:Tagesschau:",
     "status": 1,
@@ -691,51 +740,51 @@
     "aux": ""
   }
 ]</code></pre>
-                    </p>
-                    <h5>Status Code: <code>401</code></h5>
-                    <p class="flow-text">Authentication failed.</p>
-                    <h5>Status Code: <code>503</code></h5>
-                    <p class="flow-text">Connection to dbus2vdr failed.</p>
-                  </div>
-                  <p class="flow-text">Press the button below to see the API call in action:</p>
-                    <div class="divider"></div>
-                    <div class="row">
-                          <a id="vdr_timers" class="btn waves-effect waves-light" type="button">
-                          List Timers (GET) <i class="material-icons right">send</i>
-                          </a>
-                        </form>
+                      </p>
+                      <h5>Status Code: <code>401</code></h5>
+                      <p class="flow-text">Authentication failed.</p>
+                      <h5>Status Code: <code>503</code></h5>
+                      <p class="flow-text">Connection to dbus2vdr failed.</p>
                     </div>
-                    <p class="flow-text">JSON response:</p>
-                    <pre id="vdr_timers_response"></pre>
-                    <p class="flow-text">
-                      Status Code: <code id="vdr_timers_status_code"></code>
-                    </p>
-                 </div>
-               </li>
-               <li>
-                 <div class="collapsible-header">
-                   <h5><code>/api/vdr/recordings</code></h5>
-                   <span class="badge"><h5>GET</h5></span></div>
-                 <div class="collapsible-body">
-                 </div>
-                 <div class="collapsible-body">
-                  <div class="section">
-                    <h4>Implementation Notes</h4>
-                    <p class="flow-text">
-                      Returns a list of vdr's recordings.
-                    </p>
-                  </div>
-                  <div class="section">
-                    <h4>Parameters:</h4>
-                    <h5>None</h5>
-                  </div>
-                  <div class="section">
-                    <h4>Response Messages</h4>
-                    <h5>Response Content Type:</h5>
-                    <code>application/json</code>
-                    <h5>Status Code: <code>200</code></h5>
-                    <p class="flow-text">Successfull authentication. A list of recordings is returned as a JSON message, e.g.:
-                      <pre><code>[
+                    <p class="flow-text">Press the button below to see the API call in action:</p>
+                      <div class="divider"></div>
+                      <div class="row">
+                            <a id="vdr_timers" class="btn waves-effect waves-light" type="button">
+                            List Timers (GET) <i class="material-icons right">send</i>
+                            </a>
+                          </form>
+                      </div>
+                      <p class="flow-text">JSON response:</p>
+                      <pre id="vdr_timers_response"></pre>
+                      <p class="flow-text">
+                        Status Code: <code id="vdr_timers_status_code"></code>
+                      </p>
+                   </div>
+                 </li>
+                 <li>
+                   <div class="collapsible-header">
+                     <h5><code>/api/vdr/recordings</code></h5>
+                     <span class="badge"><h5>GET</h5></span></div>
+                   <div class="collapsible-body">
+                   </div>
+                   <div class="collapsible-body">
+                    <div class="section">
+                      <h4>Implementation Notes</h4>
+                      <p class="flow-text">
+                        Returns a list of vdr's recordings.
+                      </p>
+                    </div>
+                    <div class="section">
+                      <h4>Parameters:</h4>
+                      <h5>None</h5>
+                    </div>
+                    <div class="section">
+                      <h4>Response Messages</h4>
+                      <h5>Response Content Type:</h5>
+                      <code>application/json</code>
+                      <h5>Status Code: <code>200</code></h5>
+                      <p class="flow-text">Successfull authentication. A list of recordings is returned as a JSON message, e.g.:
+                        <pre><code>[
     {
         "RecNum": 1,
         "Path": "/srv/vdr/video/heute-journal/2017-01-30.22.23.16-0.rec",
@@ -1050,6 +1099,4 @@
 
   });
   </script>
-</body>
-
-</html>
+{% endblock body %}
