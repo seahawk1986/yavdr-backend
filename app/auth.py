@@ -107,8 +107,8 @@ class Login(Resource):
             if user is not None:
                 session['username'] = username
                 session['groups'] = groups
-                return ({
-                         "msg": LOGIN_AUTH_SUCCESSFULL},
+                return ({"msg": LOGIN_AUTH_SUCCESSFULL,
+                         "groups": groups},
                         200)
         return {"msg": LOGIN_AUTH_ERROR}, 401
 
