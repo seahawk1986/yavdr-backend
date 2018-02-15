@@ -78,7 +78,12 @@
                         <p class="flow-text">Successfull authentication. A session cookie is set. Returns a JSON message:
                         <pre><code>
     {
-    "msg": "login successfull"
+    "msg": "login successfull",
+    "groups": [
+        [
+        "string",
+        ]
+    ]
     }</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
@@ -212,7 +217,7 @@
     }</code></pre>
                         <h5>Status Code: <code>401</code></h5>
                         <pre><code>{
-    "message": "invalid username or password"
+    "msg": "invalid username or password"
     }</code></pre>
                     </div>
                         <p class="flow-text">

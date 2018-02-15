@@ -64,7 +64,10 @@
                         <h5>Status Code: <code>200</code></h5>
                         <p class="flow-text">Successfull authentication. A session cookie is set. Returns a JSON message:
                         <pre><code>{
-    "msg": "login successfull"
+    "msg": "login successfull",
+    "groups": [
+        "string",
+    ]
 }</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
@@ -197,7 +200,7 @@ token=$(curl -X POST -H "Content-Type: application/json" \
 }</code></pre>
                         <h5>Status Code: <code>401</code></h5>
                         <pre><code>{
-    "message": "invalid username or password"
+    "msg": "invalid username or password"
 }</code></pre>
                     </div>
                         <p class="flow-text">
@@ -601,29 +604,20 @@ token=$(curl -X POST -H "Content-Type: application/json" \
                         <h5>Response Content Type:</h5>
                         <code>application/json</code>
                         <h5>Status Code: <code>200</code></h5>
-                        <p class="flow-text">Authentication successfull. Returns a JSON Object with the following attributes:
+                        <p class="flow-text">Authentication successfull. Returns a JSON Object with the following properties (whose data structure is described later):
                             <pre><code>{
-    "cpu_usage": [
-    ],
-    "cpu_num": 2,
-    "load_average": [
-    ],
-    "disk_usage": [
-    ],
-    "memory_usage": {
-    },
-    "swap_usage": {
-    },
-    "temperatures": {
-    },
-    "fans": {
-    },
-    "release": [
-    ],
-    "kernel": "4.13.0-32-generic",
-    "system_alias": [
-    ],
-    "uptime": "1 day, 23:11:40"
+    "cpu_usage": [],
+    "cpu_num": "integer",
+    "load_average": [],
+    "disk_usage": [],
+    "memory_usage": {},
+    "swap_usage": {},
+    "temperatures": {},
+    "fans": {},
+    "release": [],
+    "kernel": "string",
+    "system_alias": [],
+    "uptime": "string"
 }</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
