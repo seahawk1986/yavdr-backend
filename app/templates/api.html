@@ -604,20 +604,343 @@ token=$(curl -X POST -H "Content-Type: application/json" \
                         <h5>Response Content Type:</h5>
                         <code>application/json</code>
                         <h5>Status Code: <code>200</code></h5>
-                        <p class="flow-text">Authentication successfull. Returns a JSON Object with the following properties (whose data structures are described later):
-                            <pre><code>{
-    "cpu_usage": [],
-    "cpu_num": "integer",
-    "load_average": [],
-    "disk_usage": [],
+                        <p class="flow-text">Authentication successfull. Returns a JSON Object with the following properties (click on a property to show it's description):
+                            <pre><code>{</code></pre>
+                            <ul class="collapsible" data-collapsible="expandable">
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "cpu_usage": [],
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Shows the current CPU usage in percent as a list of floats (one entry per core).<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"cpu_usage": [
+  30.0,
+  20.0
+]</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "cpu_num": integer,
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">Number of CPU cores as integer value.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"cpu_num": 2</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "load_average": [],
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">Load average of the system as a list of floats for the last 1,  5, and 15 minutes.<br>
+                                  Example data:</p>
+                                  <pre><code>"load_average": [
+  0.51,
+  0.46,
+  0.46
+]</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "disk_usage": [],
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    A list of local partitions and their properties.
+                                    Integer values are in bytes.
+                                    Human readable conversions are provided as objects whose names end with
+                                    <code>_human</code>.
+                                    They contain the value as a float and the unit as a string.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"disk_usage": [
+        {
+            "total": 58789298176,
+            "used": 10221367296,
+            "free": 45551177728,
+            "percent": 18.3,
+            "total_human": {
+                "value": "54.8",
+                "unit": "GB"
+            },
+            "used_human": {
+                "value": "9.5",
+                "unit": "GB"
+            },
+            "free_human": {
+                "value": "42.4",
+                "unit": "GB"
+            },
+            "device": "/dev/sda2",
+            "mountpoint": "/",
+            "fstype": "ext4",
+            "opts": "rw,relatime,errors=remount-ro,data=ordered"
+    },
+]</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
     "memory_usage": {},
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a JSON object with informations about RAM usage.
+                                    Integer values are in bytes.
+                                    Human readable conversions are provided as objects whose names end with
+                                    <code>_human</code>.
+                                    They contain the value as a float and the unit as a string.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"memory_usage": {
+    "total": 4136292352,
+    "available": 3569602560,
+    "percent": 13.7,
+    "used": 305446912,
+    "free": 3037032448,
+    "active": 625664000,
+    "inactive": 279236608,
+    "buffers": 75804672,
+    "cached": 718008320,
+    "shared": 2428928,
+    "total_human": {
+        "value": "3.9",
+        "unit": "GB"
+    },
+    "available_human": {
+        "value": "3.3",
+        "unit": "GB"
+    },
+    "used_human": {
+        "value": "291.3",
+        "unit": "MB"
+    },
+    "free_human": {
+        "value": "2.8",
+        "unit": "GB"
+    },
+    "active_human": {
+        "value": "596.7",
+        "unit": "MB"
+    },
+    "inactive_human": {
+        "value": "266.3",
+        "unit": "MB"
+    },
+    "buffers_human": {
+        "value": "72.3",
+        "unit": "MB"
+    },
+    "cached_human": {
+        "value": "684.7",
+        "unit": "MB"
+    },
+    "shared_human": {
+        "value": "2.3",
+        "unit": "MB"
+    }
+}</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
     "swap_usage": {},
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a JSON object with informations about SWAP usage.
+                                    Integer values are in bytes.
+                                    Human readable conversions are provided as objects whose names end with
+                                    <code>_human</code>.
+                                    They contain the value as a float and the unit as a string.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"swap_usage": {
+        "total": 968155136,
+        "used": 0,
+        "free": 968155136,
+        "percent": 0.0,
+        "sin": 0,
+        "sout": 0,
+        "total_human": {
+            "value": "923.3",
+            "unit": "MB"
+        },
+        "used_human": {
+            "value": "0",
+            "unit": "B"
+        },
+        "free_human": {
+            "value": "923.3",
+            "unit": "MB"
+        },
+        "sin_human": {
+            "value": "0",
+            "unit": "B"
+        },
+        "sout_human": {
+            "value": "0",
+            "unit": "B"
+        }
+    }</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
     "temperatures": {},
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a list of sensor modules containing objects with individual measurements.
+                                    All temperatures are measured in °C.
+                                    Each object has four keys: a label, current, high and critial temperature.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"temperatures": {
+        "coretemp": [
+            {
+                "label": "Package id 0",
+                "current": 36.0,
+                "high": 82.0,
+                "critical": 102.0
+            },
+            {
+                "label": "Core 0",
+                "current": 34.0,
+                "high": 82.0,
+                "critical": 102.0
+            },
+            {
+                "label": "Core 1",
+                "current": 33.0,
+                "high": 82.0,
+                "critical": 102.0
+            }
+        ],
+    }</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
     "fans": {},
-    "release": [],
-    "kernel": "string",
-    "system_alias": [],
-    "uptime": "string"
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a list of sensor modules with objects for each fan connector.
+                                    Fan speeds are measured in rounds per minute (RPM).
+                                    Please note that not all sensors provide meaningful labels.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"fans": {
+        "nct6775": [
+            {
+                "label": "",
+                "current": 0
+            },
+            {
+                "label": "",
+                "current": 937
+            },
+            {
+                "label": "",
+                "current": 0
+            },
+            {
+                "label": "",
+                "current": 0
+            }
+        ]
+    }</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "release": [],
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns an array of three strings containing the distribution name, version and code name of the release.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"release": [
+        "Ubuntu",
+        "18.04",
+        "bionic"
+    ],</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "kernel": "string",
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a string with kernel version information.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"kernel": "4.13.0-32-generic"</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "system_alias": [],
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns an array containing three strings with system type, kernel release and build date.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"system_alias": [
+        "Linux",
+        "4.13.0-32-generic",
+        "#35-Ubuntu SMP Thu Jan 25 09:13:46 UTC 2018"
+    ],</code></pre>
+                                </div>
+                              </li>
+                              <li>
+                                <div class="collapsible-header">
+                                  <code>
+                                    "uptime": "string"
+                                  </code>
+                                </div>
+                                <div class="collapsible-body">
+                                  <p class="flow-text">
+                                    Returns a string with uptime information.<br>
+                                    Example data:
+                                  </p>
+                                  <pre><code>"uptime": "0:27:29"</code></pre>
+                                </div>
+                              </li>
+                            </ul>
 }</code></pre>
                         </p>
                         <h5>Status Code: <code>401</code></h5>
