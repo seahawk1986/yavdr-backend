@@ -75,8 +75,8 @@ def system_alias():
 
 def uptime():
     return str(
-        datetime.timedelta(seconds=int(
-            datetime.datetime.utcnow().timestamp() - psutil.boot_time())))
+        datetime.timedelta(seconds=abs(int(
+            datetime.datetime.utcnow().timestamp() - psutil.boot_time()))))
 
 
 def collect_data(include=[]):
