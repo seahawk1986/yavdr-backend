@@ -1325,6 +1325,33 @@ token=$(curl -X POST -H "Content-Type: application/json" \
       })
     });
 
+    $('#get_system_status').click(function() {
+      $.ajax({
+        type: "GET",
+        url: "/api/system/status",
+        beforeSend: function(xhr) {
+          if (localStorage.token) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.token);
+          }
+          $('#login_data').text(JSON.stringify({
+           }, null, 2));
+        },
+        success: function(data) {
+          $('#login_result').text(data);
+          
+          Materialize.toast('got system status information', 4000, 'rounded')
+        },
+        error: function(jqXHR, ajaxOptions, thrownError) {
+          if (jqXHR.status == 401) {
+            Materialize.toast('not authenticated', 4000, 'rounded')
+          }
+        },
+        complete: function(data) {
+          $('#system_status_response').text(JSON.stringify(data.responseJSON, null, 2));
+          $('#system_status_status_code').text(data.status);
+        },
+      })
+    });
     $('#vdr_plugins').click(function() {
       $.ajax({
         type: "GET",
