@@ -13,10 +13,7 @@ def av(arg):
 
 @av.register(int)
 def _(arg):
-    try:
-        return GLib.Variant('i', arg)
-    except OverFlowError:
-        return GLib.Variant('x', arg)
+    return GLib.Variant('i', arg)
 
 @av.register(float)
 def _(arg):
