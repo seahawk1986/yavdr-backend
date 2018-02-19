@@ -4,7 +4,7 @@ from gi.repository import GLib
 """
 The function av(arg) (short for auto variant) changes usual data types
 to dbus variants. This is especially useful when using pydbus for api calls
-which allow a great variety of arguments.
+which have variants in the signature.
 """
 
 @singledispatch
@@ -13,7 +13,14 @@ def av(arg):
 
 @av.register(int)
 def _(arg):
-    return GLib.Variant('i', arg)
+    try:
+        return GLib.Variant('i', arg)
+    except OverFlowError:
+        return GLib.Variant('x', arg)
+
+@av.register(float)
+def _(arg):
+    return GLib.Variant('d', arg)
 
 @av.register(str)
 def _(arg):
@@ -29,6 +36,8 @@ def _(arg):
         variant_type = 'as'
     elif all(map(lambda x: isinstance(x, int), arg)):
         variant_type = 'ai'
+    elif all(map(lambda x: isinstance(x, float), arg)):
+        variant_type = 'ad'
     elif all(map(lambda x: isinstance(x, bool), arg)):
         variant_type = 'ab'
     else:
@@ -42,6 +51,8 @@ def _(arg):
         variant_type_keys = "s"
     elif all(map(lambda x: isinstance(x, int), arg.keys())):
         variant_type_keys = "i"
+    elif all(map(lambda x: isinstance(x, float), arg.keys())):
+        variant_type_values = "d"
     elif all(map(lambda x: isinstance(x, bool), arg.keys())):
         variant_type_keys = "b"
     else:
@@ -51,6 +62,8 @@ def _(arg):
         variant_type_values = "s"
     elif all(map(lambda x: isinstance(x, int), arg.values())):
         variant_type_values = "i"
+    elif all(map(lambda x: isinstance(x, float), arg.values())):
+        variant_type_values = "d"
     elif all(map(lambda x: isinstance(x, bool), arg.values())):
         variant_type_values = "b"
     else:

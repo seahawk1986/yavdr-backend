@@ -24,7 +24,6 @@ class SystemAction(Resource):
                 return {'msg': 'you must pass a json object ("{}")' }, 402
 
             data = { key: dbus_tools.av(value) for key, value in data.items()}
-            print(data)
             r_code, r_msg = backend.queue_action(action_name, data)
             if r_code == 200:
                 return {'msg': 'action queued', 'job_id': r_msg }, r_code
