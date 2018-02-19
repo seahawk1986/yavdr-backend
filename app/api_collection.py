@@ -13,8 +13,8 @@ class SystemInfo(Resource):
     def get(self):
         return sys_usage.collect_data(), 200
 
-class SystemAction(Resource):
-    def post(self, action_name):
+class SystemTask(Resource):
+    def post(self, task):
         try:
             backend = system_bus.get('de.yavdr.backend')
             data = request.get_json()
@@ -24,26 +24,38 @@ class SystemAction(Resource):
                 return {'msg': 'you must pass a json object ("{}")' }, 402
 
             data = { key: dbus_tools.av(value) for key, value in data.items()}
-            r_code, r_msg = backend.queue_action(action_name, data)
+            r_code, r_msg = backend.queue_task(task, data)
             if r_code == 200:
-                return {'msg': 'action queued', 'job_id': r_msg }, r_code
+                return {'msg': 'task queued', 'task_id': r_msg }, r_code
             else:
-                return {'msg': 'action rejected: {}'.format(r_msg)}, r_code
+                return {'msg': 'task rejected: {}'.format(r_msg)}, r_code
         except GLib.Error:
             return {'msg': 'yavdr-backend is not available'}, 503
 
-class JobStatus(Resource):
-    def get(self, job_id):
+    def get(self, task):
         try:
             backend = system_bus.get('de.yavdr.backend')
-            response = backend.jobStatus(job_id)
-            return {'msg': 'job is {}'.format(job_str),
-                    'is_running': job_is_running,
-                    'is_cancelled': 'job_is_cancelled',
-                    'is_done': job_is_done,
+            r_code, data = backend.taskStatus(task)
+            # TODO: get task status from response
+            if r_code != 200:
+                return {'msg': 'invalid task id'}, r_code
+            return {'msg': 'task is {}'.format(data.get("msg")),
+                    'is_running': data.get('is_running'),
+                    'is_cancelled': data.get('is_cancelled'),
+                    'is_done': data.get('is_done'),
             }, 200
         except GLib.Error:
             return {'msg': 'yavdr-backend is not available'}, 503
+
+    def delete(self, task):
+        try:
+            backend = system_bus.get('de.yavdr.backend')
+            r_code, msg = backend.deleteTask(task)
+            # TODO: get task status from response
+            return {'msg': msg}, r_code
+        except GLib.Error:
+            return {'msg': 'yavdr-backend is not available'}, 503
+        
 
 
 class VDR_Status(Resource):
