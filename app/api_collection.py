@@ -60,6 +60,7 @@ class SystemTask(Resource):
 
 class VDR_Status(Resource):
     def get(self):
+        # TODO: Write actual implementation
         return {
                 'Recordings': [],
                 'Timer': [],
