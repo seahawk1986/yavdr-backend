@@ -2,11 +2,12 @@
 This module provides a stateless PAM-authentification.
 """
 import grp
+import json
 from functools import wraps
 from app import app, api
 from itsdangerous import (TimedJSONWebSignatureSerializer
                           as Serializer, BadSignature, SignatureExpired)
-from flask import request, session, Response
+from flask import request, session, Response, jsonify
 from flask_restful import Resource, reqparse
 import system_utils.pam as pam
 
@@ -24,31 +25,33 @@ def check_group_permissions(groups, limit_groups):
         return False
     return True
 
-def login_required(f, limit_groups=None):
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        try:
-            if 'username' in session and 'groups' in session:
-                if check_group_permissions(session['groups'], limit_groups):
-                    return f(*args, **kwds)
+def login_required(f=None, limit_groups=None):
+    def actual_decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwds):
+            try:
+                if 'username' in session and 'groups' in session:
+                    if check_group_permissions(session['groups'], limit_groups):
+                        return f(*args, **kwds)
+                    raise PermissionError
+                auth_data = request.headers.get('Authorization')
+                if not auth_data:
+                    raise PermissionError
+                token = auth_data.split()[-1]
+                if token:
+                    token_data = PAM_Auth.verify_auth_token(token)
+                    if (token_data is not None and
+                    check_group_permissions(token_data['groups'], limit_groups)):
+                        return f(*args, **kwds)
                 raise PermissionError
-            auth_data = request.headers.get('Authorization')
-            if not auth_data:
-                raise PermissionError
-            token = auth_data.split()[-1]
-            if token:
-                token_data = PAM_Auth.verify_auth_token(token)
-                if (token_data is not None and
-                check_group_permissions(token_data['groups'], limit_groups)):
-                    return f(*args, **kwds)
-            raise PermissionError
-        except PermissionError:
-            return Response(
-                'Could not verify your access level for that URL.\n'
-                'You have to login with proper credentials', 401,
-                {'WWW-Authenticate': 'Bearer realm="Login Required"'})
-                # {'msg': AUTH_ERROR}, 401)
-    return wrapper
+            except PermissionError:
+                return Response(json.dumps({"msg": AUTH_ERROR}), 401, {'WWW-Authenticate': 'Bearer realm="Login Required"'})
+        return wrapper
+    if not f:
+        def waiting_for_f(f):
+            return actual_decorator(f)
+        return waiting_for_f
+    return actual_decorator(f)
 
 class PAM_Auth:
     def __init__(self):
