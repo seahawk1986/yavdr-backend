@@ -60,17 +60,7 @@ def api_description():
 @app.errorhandler(404)
 def page_not_found(error):
     return redirect(url_for('index'))
-#@app.route('/login', methods=['GET', 'POST'])
-#def login_auth():
-#    if request.method == 'POST':
-#        session['username'] = request.form['username']
-#        return redirect(url_for('index'))
-#    return '''
-#        <form method="post">
-#            <p><input type="text" name="username">
-#            <p><input type="password" name="password">
-#            <p><input type="submit" value="Login">
-#        </form>'''
+
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     session.pop('userdata', None)
@@ -83,30 +73,3 @@ def usage():
     data = sys_usage.collect_data()
     return render_template('usage.html', title='System Information', data=data)
 
-# @pam_auth.login_required
-# @app.route('/api/hitkey', methods=['POST'])
-# def hitkey(key):
-#     try:
-#         bus = pydbus.SystemBus()
-#         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
-#         success, key_code = lircd2uinput.emit_key(key.upper())
-#     except GLib.Error:
-#         return jsonify({'msg': 'lircd2uinput is not available'}), 503
-#     if success:
-#         return jsonify({'msg': 'ok', 'key': key.upper()}), 200
-#     else:
-#         return jsonify({'msg': 'unknown key'}), 400
-
-# @pam_auth.login_required
-# @app.route('/api/hitkeys', methods=['POST'])
-# def hitkey(key):
-#     try:
-#         bus = pydbus.SystemBus()
-#         lircd2uinput = bus.get('de.yavdr.lircd2uinput', '/control')
-#         success, key_code = lircd2uinput.emit_key(key.upper())
-#     except GLib.Error:
-#         return jsonify({'msg': 'lircd2uinput is not available'}), 503
-#     if success:
-#         return jsonify({'msg': 'ok', 'key': key.upper()}), 200
-#     else:
-#         return jsonify({'msg': 'unknown key'}), 400
