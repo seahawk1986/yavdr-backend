@@ -32,10 +32,10 @@ class SystemTask(Resource):
         except GLib.Error:
             return {'msg': 'yavdr-backend is not available'}, 503
 
-    def get(self, task):
+    def get(self, task_id):
         try:
             backend = system_bus.get('de.yavdr.backend')
-            r_code, data = backend.taskStatus(task)
+            r_code, data = backend.taskStatus(task_id)
             # TODO: get task status from response
             if r_code != 200:
                 return {'msg': 'invalid task id'}, r_code
@@ -47,10 +47,10 @@ class SystemTask(Resource):
         except GLib.Error:
             return {'msg': 'yavdr-backend is not available'}, 503
 
-    def delete(self, task):
+    def delete(self, task_id):
         try:
             backend = system_bus.get('de.yavdr.backend')
-            r_code, msg = backend.deleteTask(task)
+            r_code, msg = backend.deleteTask(task_id)
             # TODO: get task status from response
             return {'msg': msg}, r_code
         except GLib.Error:
