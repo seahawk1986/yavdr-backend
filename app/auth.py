@@ -96,7 +96,7 @@ class TokenLogin(Resource):
                 return ({"token": token.decode('utf-8'), # the serializer returns a byte object
                          "msg": LOGIN_AUTH_SUCCESSFULL},
                         200)
-        return {"msg": LOGIN_AUTH_ERROR}, 401
+        return {"msg": LOGIN_AUTH_ERROR}, 400
 
 
 class Login(Resource):
@@ -113,7 +113,7 @@ class Login(Resource):
                 return ({"msg": LOGIN_AUTH_SUCCESSFULL,
                          "groups": groups},
                         200)
-        return {"msg": LOGIN_AUTH_ERROR}, 401
+        return {"msg": LOGIN_AUTH_ERROR}, 400
 
     def get(self):
         if 'username' in session and 'groups' in session:
