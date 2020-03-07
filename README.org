@@ -1,0 +1,10 @@
+* yavdr-backend
+This is the second attempt building a restful backend for yavdr-ansible, but this time with support for websocket connections and based on an async framework, so it should be faster, more versatile and self-documenting (provides an openapi interface).
+
+* Routes
+** Auth
+The methods in this route provide the means to log in and authenticate an user by cookie or a JWT.
+** System
+The methods in this route provide system information
+** VDR
+This route provides vdr-related informations
