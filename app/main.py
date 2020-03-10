@@ -10,7 +10,7 @@ from routers import auth, system, lircd2uinput
 app = FastAPI()
 
 # mount the static ressources
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 
 @app.get("/", include_in_schema=False)

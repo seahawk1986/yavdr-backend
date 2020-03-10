@@ -2,16 +2,14 @@
 import datetime
 import os
 import platform
+import subprocess
+import sys
 from collections import namedtuple
 
 import distro
 import psutil
 
-from pydantic import (
-    BaseModel,
-    constr,
-    conlist,
-)
+from pydantic import BaseModel, constr, conlist
 
 
 def bytes2human(n):
@@ -27,14 +25,8 @@ def bytes2human(n):
     for s in reversed(symbols):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
-            return {
-                "value": f"{value:.1f}",
-                "unit": f"{s}B",
-            }
-    return {
-        "value": "%s" % n,
-        "unit": "B",
-    }
+            return {"value": f"{value:.1f}", "unit": f"{s}B"}
+    return {"value": "%s" % n, "unit": "B"}
 
 
 def add_human_readable(dictionary):
@@ -82,6 +74,17 @@ def sensors_temperature():
     temperature_data = {}
     for sensor_module, data in psutil.sensors_temperatures().items():
         temperature_data[sensor_module] = [s._asdict() for s in data]
+    try:
+        p = subprocess.run(
+            ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        temperature_data["nvidia_temp"] = p.stdout.strip()
+    except (subprocess.CalledProcessError, IOError) as err:
+        print("could not get nvidia-temperature", err, file=sys.stderr)
+        pass
     return temperature_data
 
 

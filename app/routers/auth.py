@@ -72,16 +72,19 @@ def get_user(username: str):
     groups = get_user_groups(username)
     return User(username=username, scopes=groups)
 
+full_access_groups = set(["adm", "log", "remote"])
 
 def create_access_token(*, data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if not (scopes := to_encode.get('scopes')):
         scopes = supported_scopes
     groups = set(get_user_groups(to_encode.get('sub')))
+    # if the user is a member of one of the adminstrative groups and did not request
+    # specific persmissions
     if any(g for g in groups if g in ("adm", "wheel", "sudo")):
-        groups.add("adm")
-        groups.add("log")
+        groups |= full_access_groups
     to_encode['scopes'] = [s for s in scopes if s in groups]
+    # if a expiration date has been requested, use it
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -129,9 +132,19 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user), scopes: List[str] = ["me"]
+    current_user: User = Depends(get_current_user), scopes: List[str] = []
 ) -> User:
     return current_user
+
+@router.post("/token/refresh", response_model=Token)
+async def refresh_access_token(current_user: User = Depends(get_current_active_user)):
+    """return a newly created token if the user is authenticated by a valid token"""
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.username, "scopes": current_user.scopes},
+        expires_delta=access_token_expires,
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/token", response_model=Token)
@@ -139,7 +152,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     """Oauth2 style login.
 
     Currently only username, password and scopes are used.
-    The allowed scopes
+
+    If no scopes are given, the user receives maximum permissions if the account is a member
+    of one of the administrative groups (adm, sudo, wheel).
+
+    Otherwise the requested scopes are returned if the user is a member in the respective groups.
     """
     if not pam_authenticator.authenticate(form_data.username, form_data.password):
         raise HTTPException(
@@ -159,10 +176,15 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
 
+
+# TODO: move to own module
 @router.get("/logs/vdr/")
 async def read_scope(
     current_user: User = Security(get_current_active_user, scopes=["log"])):
     r = journal.Reader()
-    r.get_monotonic(timedelta(minutes=1))
-
-    return [e for e in r.get_next()]
+    #r.seek_monotonic(timedelta(minutes=-1))
+    r.this_boot()
+    #events = [e for e in r.get_next()]
+    r.add_match("SYSLOG_IDENTIFIER=vdr")
+    #events = list(r)
+    return list(r)

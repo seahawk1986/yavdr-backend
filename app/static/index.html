@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<script src="js/materialize.min.js"></script>
+	<script src="js/login.js"></script>
+	<link rel="stylesheet" type="text/css" href="css/materialize.min.css">
+	<link rel="stylesheet" type="text/css" href="css/material-icons.css">
+	<link rel="stylesheet" type="text/css" href="css/login_form.css">
+</head>
+
+<body>
+	<div>
+		
+		<button class="btn-large red right" onclick="logout();">
+			Logout
+			<i class="material-icons right">exit_to_app</i>
+		</button></div>
+	<h4 id="greeting"></h4>
+	<h4>System Status</h4>
+	<div id="system_status"></div>
+
+	<div id="modal-login" class="modal">
+		<div class="modal-content center">
+			<h4>yaVDR Webfrontend Login</h4>
+			<br>
+			<form class="form" id="login_form">
+				<div class="input-field">
+					<i class="material-icons prefix">person</i>
+					<input type="text" required id="login_username" name="username"
+						autocomplete="username">
+					<label for="username" active>Username</label>
+				</div>
+				<div class="input-field">
+					<i class="material-icons prefix">lock</i>
+					<input type="password" required id="login_password" name="password"
+						autocomplete="current-password">
+					<label for="password" active>Password</label>
+				</div>
+				<div id="login_progress"></div>
+				<div class="row">
+					<span class="red-text left col s4" id="login_msg"></span>
+					<span class="col s4">
+						<button id="login_btn" class="btn waves-effect waves-light btn center" type="submit" name="action">Login
+							<i class="material-icons right" id="login_icon">send</i>
+						</button>
+					</span>
+				</div>
+			</form>
+		</div>
+	</div>
+	<script>
+	</script>
+</body>
+
+</html>
