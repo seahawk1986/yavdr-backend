@@ -81,7 +81,15 @@ def sensors_temperature():
             text=True,
             check=True,
         )
-        temperature_data["nvidia_temp"] = p.stdout.strip()
+        if (nvidia_temp := p.stdout.strip()):
+            temperature_data["nvidia"] = [
+                {
+                    "label": "GPU",
+                    "current": float(p.stdout.strip()),
+                    "max": 115,
+                    "high": 80,
+                },
+                ]
     except (subprocess.CalledProcessError, IOError) as err:
         print("could not get nvidia-temperature", err, file=sys.stderr)
         pass
