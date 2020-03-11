@@ -11,15 +11,331 @@
 </head>
 
 <body>
-	<div>
-		
-		<button class="btn-large red right" onclick="logout();">
-			Logout
-			<i class="material-icons right">exit_to_app</i>
-		</button></div>
+	<nav class="blue-grey darken-3">
+		<div class="nav-wrapper">
+			<button href="#" data-target="slide-out"
+				class="sidenav-trigger btn-big blue-grey darken-2 btn-flat left white-text"><i
+					class="material-icons">menu</i></button>
+			<a href="#" class="brand-logo center">yaVDR</a>
+			<!-- <ul id="nav-mobile" class="right hide-on-med-and-down">
+				<li><a href="sass.html">Sass</a></li>
+				<li><a href="badges.html">Components</a></li>
+				<li><a href="collapsible.html">JavaScript</a></li>
+			</ul> -->
+			<div>
+				<button class="btn-large red darken-4 right" onclick="auth.logout();">
+					Logout
+					<i class="material-icons right">exit_to_app</i>
+				</button>
+			</div>
+
+		</div>
+	</nav>
+
+	<ul id="slide-out" class="sidenav">
+		<li>
+			<div class="user-view">
+				<div class="background">
+					<img src="images/office.jpg">
+				</div>
+				<a href="#user"><img class="circle" src="images/yuna.jpg"></a>
+				<a href="#name"><span class="white-text name">John Doe</span></a>
+				<a href="#email"><span class="white-text email">jdandturk@gmail.com</span></a>
+			</div>
+		</li>
+		<li><a href="#!"><i class="material-icons">cloud</i>First Link With Icon</a></li>
+		<li><a href="#!">Second Link</a></li>
+		<li>
+			<div class="divider"></div>
+		</li>
+		<li><a class="subheader">Subheader</a></li>
+		<li><a class="waves-effect" href="#!">Third Link With Waves</a></li>
+	</ul>
+
 	<h4 id="greeting"></h4>
-	<h4>System Status</h4>
-	<div id="system_status"></div>
+	<div class="container">
+		<div class="card">
+			<div class="card-content">
+				<span class="card-title"><i class="material-icons prefix">developer_board</i>System Status</span>
+				<!-- <p>This card contains data collected by psutil.</p> -->
+			</div>
+			<div class="card-tabs">
+				<ul class="tabs tabs-fixed-width">
+					<li class="tab"><a href="#system_resources">Resources</a></li>
+					<li class="tab"><a href="#system_status">Temperatures</a></li>
+					<li class="tab"><a href="#system_fans">Fans</a></li>
+					<li class="tab"><a class="active" href="#system_hdd">Disks</a></li>
+				</ul>
+			</div>
+			<div class="card-content">
+				<div id="system_resources">Resources</div>
+				<div id="system_status">Temperatures</div>
+				<div id="system_fans">Fans</div>
+				<div id="system_hdd">Disks</div>
+			</div>
+		</div>
+	</div>
+	<div class="container">
+		<div class="card">
+			<div class="card-content">
+				<span class="card-title"><i class="material-icons prefix">settings_remote</i>Remote</span>
+			</div>
+			<div class="card-content">
+				<div class="container">
+					<div class="row center">
+						<div class="col s2">
+							<button onclick="hit_key('KEY_HOME');"
+								class="col-content waves-effect waves-light btn-floating btn-large indigo darken-2"
+								alt="up"><i class="material-icons" alt="KODI">subscriptions</i></button>
+						</div>
+						<div class="col s2">
+							<button onclick="hit_key('KEY_SETUP');"
+								class="col-content waves-effect waves-light btn-floating btn-large green darken-2"
+								alt="setup"><i class="material-icons" alt="settings">settings</i></button>
+						</div>
+						<div class="col s4 push-s5">
+							<button onclick="hit_key('KEY_POWER2');"
+								class="col-content waves-effect waves-light btn-floating btn-large red darken-4"
+								alt="up"><i class="material-icons" alt="power">power_settings_new</i></button>
+						</div>
+
+					</div>
+					<div class="divider"></div>
+					<div class="section">
+						<div class="row center">
+							<div class="col s4">
+								<button onclick="hit_key('KEY_1');"
+									class="col-content waves-effect waves-light btn-large remote-btn">1</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_2');"
+									class="col-content waves-effect waves-light btn-large remote-btn">2</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_3');"
+									class="col-content waves-effect waves-light btn-large remote-btn">3</button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s4">
+								<button onclick="hit_key('KEY_4');"
+									class="col-content waves-effect waves-light btn-large remote-btn">4</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_5');"
+									class="col-content waves-effect waves-light btn-large remote-btn">5</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_6');"
+									class="col-content waves-effect waves-light btn-large remote-btn">6</button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s4">
+								<button onclick="hit_key('KEY_7');"
+									class="col-content waves-effect waves-light btn-large remote-btn">7</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_8');"
+									class="col-content waves-effect waves-light btn-large remote-btn">8</button>
+							</div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_9');"
+									class="col-content waves-effect waves-light btn-large remote-btn">9</button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s4 "></div>
+							<div class="col s4">
+								<button onclick="hit_key('KEY_0');"
+									class="col-content waves-effect waves-light btn-large remote-btn">0</button>
+							</div>
+							<div class="col s4 "></div>
+						</div>
+					</div>
+					<div class="divider"></div>
+					<div class="section">
+						<div class="row">
+							<div class="col s3">
+								<button onclick="hit_key('KEY_RED');"
+									class="col-content waves-effect waves-light btn-large red darken-4"></button>
+							</div>
+							<div class="col s3">
+								<button onclick="hit_key('KEY_YELLOW');"
+									class="col-content waves-effect waves-light btn-large green darken-3"></button>
+							</div>
+							<div class="col s3">
+								<button onclick="hit_key('KEY_GREEN');"
+									class="col-content waves-effect waves-light btn-large yellow darken-1"></button>
+							</div>
+							<div class="col s3">
+								<button onclick="hit_key('KEY_BLUE');"
+									class="col-content waves-effect waves-light btn-large blue darken-4"></button>
+							</div>
+						</div>
+					</div>
+					<div class="divider"></div>
+					<div class="section">
+						<div class="row center">
+							<div class="col s2 push-s3">
+								<button onclick="hit_key('KEY_RECORD');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round red-text text-darken-4"
+									alt="record">
+									<i class="material-icons red-text text-darken-4" alt="left">fiber_manual_record</i>
+								</button>
+							</div>
+							<div class="col s2 push-s3 valign-wrapper">
+								<button onclick="hit_key('KEY_PLAY');"
+									class="col-content waves-effect waves-light btn-large remote-btn" alt="play"><i
+										class="material-icons" alt="left">play_arrow</i></button>
+							</div>
+							<div class="col s2 push-s3">
+
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s2">
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_REWIND');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="rewind">fast_rewind</i></button>
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_PAUSE');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="pause">pause</i></button>
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_FASTFORWARD');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="fast forward">fast_forward</i></button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s2">
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_BACK');"
+									class="col-content center waves-effect waves-light btn-large remote-btn"
+									alt="skip back">
+									<i class="material-icons" alt="left">skip_previous</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_STOP');"
+									class="col-content center waves-effect waves-light btn-large remote-btn"
+									alt="stop">
+									<i class="material-icons" alt="left">stop</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_NEXT');"
+									class="col-content center waves-effect waves-light btn-large remote-btn"
+									alt="skip forward">
+									<i class="material-icons" alt="left">skip_next</i>
+								</button>
+							</div>
+							<div class="col s2 push-s2">
+							</div>
+						</div>
+					</div>
+					<div class="divider"></div>
+					<div class="section">
+						<div class="row center">
+							<div class="col s2">
+								<button onclick="hit_key('KEY_VOLUMEUP');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="volume_up">
+									<i class="material-icons" alt="left">volume_up</i>
+								</button>
+							</div>
+							<div class="col s2 push-s3 valign-wrapper">
+								<button onclick="hit_key('KEY_UP');"
+									class="col-content waves-effect waves-light btn-large remote-btn" alt="up"><i
+										class="material-icons" alt="left">keyboard_arrow_up</i></button>
+							</div>
+							<div class="col s2 push-s3">
+								<button onclick="hit_key('KEY_INFO');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="info">
+									<i class="material-icons" alt="left">info</i>
+								</button>
+							</div>
+							<div class="col s2 push-s4">
+								<button onclick="hit_key('KEY_CHANNELUP');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="arrow_upward">
+									<i class="material-icons" alt="left">arrow_upward</i>
+								</button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s2">
+								<button onclick="hit_key('KEY_MUTE');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="volume_mute">
+									<i class="material-icons" alt="left">volume_mute</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_LEFT');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="left">keyboard_arrow_left</i></button>
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_OK');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="ok">check</i></button>
+							</div>
+							<div class="col s2 push-s1 valign-wrapper">
+								<button onclick="hit_key('KEY_RIGHT');"
+									class="col-content waves-effect waves-light btn-large remote-btn"><i
+										class="material-icons" alt="right">keyboard_arrow_right</i></button>
+							</div>
+						</div>
+						<div class="row center">
+							<div class="col s2">
+								<button onclick="hit_key('KEY_VOLUMEDOWN');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="volume_down">
+									<i class="material-icons" alt="left">volume_down</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_ESC');"
+									class="col-content center waves-effect waves-light btn-floating btn-large remote-btn-round"
+									alt="back">
+									<i class="material-icons" alt="left">arrow_back</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_DOWN');"
+									class="col-content center waves-effect waves-light btn-large remote-btn"
+									alt="down">
+									<i class="material-icons" alt="left">keyboard_arrow_down</i>
+								</button>
+							</div>
+							<div class="col s2 push-s1">
+								<button onclick="hit_key('KEY_MENU');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="menu">
+									<i class="material-icons" alt="left">menu</i>
+								</button>
+							</div>
+							<div class="col s2 push-s2">
+								<button onclick="hit_key('KEY_CHANNELDOWN');"
+									class="col-content center btn-floating waves-effect waves-light btn-large remote-btn-round"
+									alt="arrow_downward">
+									<i class="material-icons" alt="left">arrow_downward</i>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<div id="modal-login" class="modal">
 		<div class="modal-content center">
@@ -28,21 +344,20 @@
 			<form class="form" id="login_form">
 				<div class="input-field">
 					<i class="material-icons prefix">person</i>
-					<input type="text" required id="login_username" name="username"
-						autocomplete="username">
+					<input type="text" required id="login_username" name="username" autocomplete="username">
 					<label for="username" active>Username</label>
 				</div>
 				<div class="input-field">
 					<i class="material-icons prefix">lock</i>
-					<input type="password" required id="login_password" name="password"
-						autocomplete="current-password">
+					<input type="password" required id="login_password" name="password" autocomplete="current-password">
 					<label for="password" active>Password</label>
 				</div>
 				<div id="login_progress"></div>
 				<div class="row">
 					<span class="red-text left col s4" id="login_msg"></span>
 					<span class="col s4">
-						<button id="login_btn" class="btn waves-effect waves-light btn center" type="submit" name="action">Login
+						<button id="login_btn" class="btn waves-effect waves-light btn center" type="submit"
+							name="action">Login
 							<i class="material-icons right" id="login_icon">send</i>
 						</button>
 					</span>
@@ -50,6 +365,39 @@
 			</form>
 		</div>
 	</div>
+
+	<footer class="page-footer blue-grey darken-4">
+		<div class="container">
+			<div class="row">
+				<div class="col l6 s12">
+					<h5 class="white-text">yaVDR Webfrontend</h5>
+					<p class="grey-text text-lighten-4">Built with <a class="white-text"
+							href="https://materializecss.com/">materializecss</a> and plain JS ES6 (so a modern browser
+						is
+						required).</p>
+				</div>
+				<div class="col l4 offset-l2 s12">
+					<h5 class="white-text">Links</h5>
+					<ul>
+						<li><a class="grey-text text-lighten-3"
+								href="https://github.com/yavdr/yavdr-ansible">yavdr-ansible auf GitHub</a></li>
+						<li><a class="grey-text text-lighten-3"
+								href="https://www.yavdr.org/documentation/0.7/yaVDR07_documentation.html">yavdr-ansible
+								Dokumentation</a></li>
+						<li><a class="grey-text text-lighten-3"
+								href="https://www.vdr-portal.de/forum/index.php?board/96-yavdr/">yaVDR auf
+								vdr-portal.de</a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="footer-copyright">
+			<div class="container">
+				© 2020 Alexander Grothe
+				<!-- <a class="grey-text text-lighten-4 right" href="#!">More Links</a> -->
+			</div>
+		</div>
+	</footer>
 	<script>
 	</script>
 </body>
