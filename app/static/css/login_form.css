@@ -25,7 +25,12 @@ body {
   color: white;
 }
 
-i.material-icons { vertical-align: middle !important; }
+/*i.material-icons { vertical-align: middle !important; }*/
+
+div.vdr_list {
+  height: 500px;
+  overflow: auto;
+}
 
 .meter { 
 	height: 20px;  /* Can be anything */
@@ -62,9 +67,9 @@ main {
   flex: 1 0 auto;
 }
 
-a.btn {
+/* a.btn {
   margin-top: 30%;
-}
+} */
 
 .modal {
   max-height: 100%;

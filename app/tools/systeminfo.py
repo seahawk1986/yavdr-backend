@@ -72,8 +72,6 @@ def load_average():
 
 def sensors_temperature():
     temperature_data = {}
-    for sensor_module, data in psutil.sensors_temperatures().items():
-        temperature_data[sensor_module] = [s._asdict() for s in data]
     try:
         p = subprocess.run(
             ["nvidia-smi", "--query-gpu=temperature.gpu", "--format=csv,noheader"],
@@ -81,18 +79,21 @@ def sensors_temperature():
             text=True,
             check=True,
         )
-        if (nvidia_temp := p.stdout.strip()):
+        nvidia_temp = p.stdout.strip()
+        if nvidia_temp:
             temperature_data["nvidia"] = [
                 {
                     "label": "GPU",
                     "current": float(p.stdout.strip()),
                     "max": 115,
                     "high": 80,
-                },
-                ]
+                }
+            ]
     except (subprocess.CalledProcessError, IOError) as err:
         print("could not get nvidia-temperature", err, file=sys.stderr)
         pass
+    for sensor_module, data in psutil.sensors_temperatures().items():
+        temperature_data[sensor_module] = [s._asdict() for s in data]
     return temperature_data
 
 

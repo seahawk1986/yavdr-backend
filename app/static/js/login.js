@@ -13,15 +13,14 @@ class Authorization {
 
         // set up variables
         this.token_data = null;
+        this.intervals = [];
         this.sys_stat_timer;
+        this.refresh_token_timer;
         this.modal_login_instance = M.Modal.getInstance(document.getElementById("modal-login"));
         this.loginForm = document.getElementById('login_form');
         this.login_msg = document.getElementById('login_msg');
         this.login_progress = document.getElementById('login_progress');
         this.login_btn = document.getElementById('login_btn');
-
-
-
 
         if (this.token_data === null) {
             this.modal_login_instance.open();
@@ -42,6 +41,7 @@ class Authorization {
         this.token_data = null;
         this.modal_login_instance.open();
         clearInterval(this.sys_stat_timer);
+        clearInterval(this.refresh_token_timer);
     }
 
     login(form) {
@@ -91,6 +91,9 @@ class Authorization {
                     update_sys_stats();
                     this.sys_stat_timer = setInterval(update_sys_stats, 5000);
                     this.login_btn.disabled = false;
+                    update_recordings();
+                    update_timers();
+                    this.refresh_token_timer = setInterval(this.refresh_token, 60 * 1000 * 5); // get a refresh token every 5 minutes
                 }
             )
             .catch((err) => {
@@ -98,6 +101,15 @@ class Authorization {
                 this.login_msg.textContent = "Invalid username or password.";
                 this.login_btn.disabled = false;
             })
+    }
+
+    async refresh_token() {
+        this.authenticated_http_request("/token/refresh")
+        .then(data => {
+            console.log("successfully got a new token.")
+            this.access_token = data.access_token;
+        }
+        ).catch(err => console.error("could not retrieve access token"))
     }
 
     async authenticated_http_request(url, method = "GET", request_data = {}) {
@@ -128,7 +140,7 @@ class Authorization {
     }
 }
 
-function hit_key(key) {
+async function hit_key(key) {
     auth.authenticated_http_request("/hitkey", "POST", {"key": key})
     .then(data => {
         console.log("sent key", key);
@@ -136,7 +148,7 @@ function hit_key(key) {
     
 }
 
-function update_sys_stats() {
+async function update_sys_stats() {
     auth.authenticated_http_request("/system/status").then(request_data => {
         const status_div = document.getElementById("system_status");
         let temp_data = '<div class="section">';
@@ -144,7 +156,6 @@ function update_sys_stats() {
             temp_data += `<div class="section"><div class="row"><span class="col 12s valign-center"><h6><i class="material-icons">developer_board</i> ${i}</h6></span></div>`;
             v.forEach((t, n) => {
                 let temp_name = (t.label) ? t.label : `Temp_${n}`
-                console.log(t.current, typeof(t.current))
                 temp_data += `
                     <div class="row">
                         <span class="col s2">${temp_name}</span>
@@ -170,7 +181,7 @@ function update_sys_stats() {
                 temp_data += `
                     <div class="row">
                         <div class="col s1 m1">${fan_name}</div>
-                        <div class="col s1 m1 text-align"><span class="right">${f.current}</span></div>
+                        <div class="col s1 m1 right-align">${f.current}</div>
                         <div class="col s1 m1">RPM</div>
                     </div>
                     `;
@@ -183,8 +194,8 @@ function update_sys_stats() {
         temp_data = `
             <div class="row">
                 <div class="col s2">Mountpoint</div>
-                <div class="col s2">Device</div>
-                <div class="col s2"><i class="material-icons">data_usage</i></div>
+                <div class="col s1">Device</div>
+                <div class="col s1"><i class="material-icons">storage</i></div>
                 <div class="col s5">Usage</div>
             </div>
         `;
@@ -193,7 +204,7 @@ function update_sys_stats() {
                         <div class="row">
                             
                             <div class="col s2">${d.mountpoint}</div>
-                            <span class="col s2">${d.device}</span>
+                            <span class="col s1">${d.device}</span>
                             <div class="col s1 meter">
                                 <span style="width: ${d.percent}%"></span>
                             </div>
@@ -203,7 +214,13 @@ function update_sys_stats() {
         });
         disk_div.innerHTML = temp_data;
 
-        temp_data = '';
+        temp_data = `
+        <div class="row">
+            <i class="material-icons col s1">device_hub</i>
+            <div class="col s2">${request_data.release.join(' ')}</div>
+            <div class="col s2">Kernel: ${request_data.kernel}</div> 
+        </div>
+        `;
         const res_div = document.getElementById('system_resources');
         const m = request_data.memory_usage;
         const c = request_data.cpu_usage;
@@ -217,7 +234,7 @@ function update_sys_stats() {
                     <div class="col s1 meter">
                         <span style="width: ${c[i]/100}%"></span>
                     </div>
-                    <div class="col s1 right-align">${c[i].toFixed(1)}%</div>
+                    <div class="col s1">${c[i].toFixed(1)}%</div>
                 </div>
             `;
         }
@@ -228,7 +245,8 @@ function update_sys_stats() {
                         <div class="col s1 meter">
                             <span style="width: ${m.percent}%"></span>
                         </div>
-                        <div class="col s2">${m.used_human.value} ${m.used_human.unit}/${m.total_human.value} ${m.total_human.unit} (${m.free_human.value} ${m.free_human.unit} free)</div>
+                        <div class="col s2">${m.used_human.value} ${m.used_human.unit}/${m.total_human.value} ${m.total_human.unit}</div>
+                        <div class="col s2">${m.free_human.value} ${m.free_human.unit} free</div>
                     </div>
                     `;
         res_div.innerHTML = temp_data;
@@ -237,6 +255,96 @@ function update_sys_stats() {
         .catch(err => {
             console.error("could not retrieve /system/status", err);
         })    
+}
+
+async function update_recordings() {
+    const update_recordings_btn = document.getElementById("update-recordings-btn");
+    update_recordings_btn.disabled = true;
+    auth.authenticated_http_request("/vdr/recordings")
+    .then(data => {
+        const recordings_ul = document.getElementById("vdr_recordings");
+        let rec_html = `
+        <li>
+            <div class="row highlight">
+                <div class="col s1">Seen</div>
+                <div class="col s2 right-align">Recording Start Date</div>
+                <div class="col s1 right-align">Duration (HH:MM:SS)</div>
+                <div class="col s7">Path</div>
+            </div>
+        </li>`;
+        data.sort((a, b) => b.Start - a.Start) // sort by date, newest first
+        .forEach((r, i) => {
+            let start_date = new Date(r.Start * 1000).toLocaleString(undefined, {
+                "year": "numeric",
+                "month": "2-digit",
+                "day": "2-digit",
+                "hour": "2-digit",
+                "minute": "2-digit"
+            });
+            let duration_str = (
+                Math.floor((r.LengthInSeconds / 3600)).toString().padStart(2, "0") + ":" + 
+                Math.floor((r.LengthInSeconds % 3600) / 60).toString().padStart(2, "0") + ":" +
+                Math.floor((r.LengthInSeconds % 3600) % 60).toString().padStart(2, "0")
+            );
+            let is_new = (r.IsNew) ? `<i class="material-icons col s1">fiber_new</i>` : `<i class="material-icons">note</i>`;
+            rec_html += `
+            <li>
+                <div class="row highlight">
+                    <div class="col s1"><i class="material-icons">${(r.IsNew) ? "fiber_new" : "note"}</i></div>
+                    <div class="col s2 right-align">${start_date}</div>
+                    <div class="col s1 right-align">${duration_str}</div>
+                    <div class="col s7">${r.FullName}</div>
+                </div>
+            </li>`
+            
+        });
+        recordings_ul.innerHTML = rec_html;
+        update_recordings_btn.disabled = false;
+    })
+    .catch(err => {
+        console.error("could not get recordings:", err)
+        update_recordings_btn.disabled = false;
+    })
+}
+
+
+async function update_timers() {
+    const update_timer_btn = document.getElementById("update-timers-btn");
+    update_timer_btn.disabled = true;
+    auth.authenticated_http_request("/vdr/timers")
+    .then(data => {
+        const timer_ul = document.getElementById("vdr_timers");
+        let timer_html = `
+        <li>
+            <div class="row">
+                <div class="col s1">State</div>
+                <div class="col s2">Date</div>
+                <div class="col s2">Time</div>
+                <div class="col s7">Name</div>
+            </div>
+        </li>
+        `;
+        data.forEach((t, i) => {
+            let start = t.start.toString();
+            let stop = t.stop.toString();
+            timer_html += `
+            <li>
+                <div class="row">
+                    <div class="col s1"><i class="material-icons">${(t.status != 0) ? "fiber_manual_record" : "not_interested"}</i></div>
+                    <div class="col s2">${t.day}</div>
+                    <div class="col s2">${start.slice(0,2) + ":" + start.slice(2,4)} - ${stop.slice(0,2) + ":" + stop.slice(2,4)}</div>
+                    <div class="col s7">${t.filename}</div>
+                </div>
+            </li>`
+            
+        });
+        timer_ul.innerHTML = timer_html;
+        update_timer_btn.disabled = false;
+    })
+    .catch(err => {
+        console.error("could not get timers:", err)
+        update_timer_btn.disabled = false;
+    })
 }
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -15,7 +15,6 @@ from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from datetime import timedelta
-from systemd import journal
 
 import tools.pam as pam
 
@@ -72,7 +71,9 @@ def get_user(username: str):
     groups = get_user_groups(username)
     return User(username=username, scopes=groups)
 
+
 full_access_groups = set(["adm", "log", "remote"])
+
 
 def create_access_token(*, data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
@@ -136,6 +137,7 @@ async def get_current_active_user(
 ) -> User:
     return current_user
 
+
 @router.post("/token/refresh", response_model=Token)
 async def refresh_access_token(current_user: User = Depends(get_current_active_user)):
     """return a newly created token if the user is authenticated by a valid token"""
@@ -175,16 +177,3 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @router.get("/users/me/", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
-
-
-# TODO: move to own module
-@router.get("/logs/vdr/")
-async def read_scope(
-    current_user: User = Security(get_current_active_user, scopes=["log"])):
-    r = journal.Reader()
-    #r.seek_monotonic(timedelta(minutes=-1))
-    r.this_boot()
-    #events = [e for e in r.get_next()]
-    r.add_match("SYSLOG_IDENTIFIER=vdr")
-    #events = list(r)
-    return list(r)
