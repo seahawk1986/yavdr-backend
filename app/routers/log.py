@@ -8,7 +8,8 @@ router = APIRouter()
 
 @router.get("/logs/vdr/")
 async def read_scope(
-    current_user: User = Security(get_current_active_user, scopes=["log"])):
+    current_user: User = Security(get_current_active_user, scopes=["log"])
+):
     r = journal.Reader()
     # r.seek_monotonic(timedelta(minutes=-1))
     r.this_boot()

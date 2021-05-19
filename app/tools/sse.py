@@ -1,3 +1,7 @@
+import typing
+from fastapi.responses import StreamingResponse
+from fastapi import BackgroundTasks
+from starlette.types import Send, Scope, Receive
 
 
 class SSE_StreamingResponse(StreamingResponse):
@@ -14,7 +18,7 @@ class SSE_StreamingResponse(StreamingResponse):
         status_code: int = 200,
         headers: dict = None,
         media_type: str = None,
-        background: BackgroundTask = None,
+        background: BackgroundTasks = None,
     ) -> None:
         self.messages = asyncio.Queue()
         self.status_code = status_code

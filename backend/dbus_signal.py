@@ -13,7 +13,7 @@ class Server_XML(object):
     """
     Server_XML definition.
     Emit / Publish a signal that is a random integer every second
-    type='i' for integer. 
+    type='i' for integer.
     """
     dbus = """
     <node>
@@ -26,10 +26,11 @@ class Server_XML(object):
     """
     app_1_signal = signal()
 
+
 def repeating_timer():
     """Generate random integer between 0 and 100 and emit over Session D-Bus
     return True to keep the GLib timer calling this function once a second."""
-    random_integer = random.randint(0,100)
+    random_integer = random.randint(0, 100)
     t = time.time()
     print(random_integer, t)
     emit.app_1_signal({
@@ -39,7 +40,7 @@ def repeating_timer():
     return True
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # Setup server to emit signals over the DBus
     emit = Server_XML()
     bus.publish(interface_name, emit)
@@ -48,6 +49,6 @@ if __name__=="__main__":
     # Run loop with graceful ctrl C exiting.
     try:
         loop.run()
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         loop.quit()
         print("\nExit by Control C")

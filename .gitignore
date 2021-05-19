@@ -1,4 +1,7 @@
 __pycache__
-.venv
+.venv/
 mitogen-*
-
+*.pyc
+node_modules/
+.new-venv/
+app/static/

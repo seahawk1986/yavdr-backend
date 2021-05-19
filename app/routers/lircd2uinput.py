@@ -1,12 +1,11 @@
 import time
-from functools import wraps
 from typing import List
 
 import pydbus
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from gi.repository import GLib
-from pydantic import BaseModel, ValidationError
-from starlette.responses import JSONResponse, Response
+from pydantic import BaseModel
+from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_200_OK,
     HTTP_400_BAD_REQUEST,

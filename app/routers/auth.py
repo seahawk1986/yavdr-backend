@@ -1,10 +1,11 @@
 import grp
 import pwd
 from datetime import datetime, timedelta
+from secrets import token_hex
 from typing import List
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import (
     OAuth2PasswordBearer,
     OAuth2PasswordRequestForm,
@@ -14,17 +15,14 @@ from jwt import PyJWTError
 from pydantic import BaseModel, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from datetime import timedelta
-
 import tools.pam as pam
 
 router = APIRouter()
 
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = "aab3804c0c7fcd0253b0fc996665ff2d1575da212993df5fcb9c9b210640c246"
+# we generate a new token on earch startup
+SECRET_KEY = token_hex(32)
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 30  # do we need to make this configurable?
 
 
 class Token(BaseModel):
@@ -103,7 +101,7 @@ async def get_current_user(
     if security_scopes.scopes:
         authenticate_value = f"Bearer scope='{security_scopes.scope_str}'"
     else:
-        authenticate_value = f"Bearer"
+        authenticate_value = "Bearer"
     credentials_exception = HTTPException(
         status_code=HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
