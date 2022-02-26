@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
 import json
-import socket
 import sys
 import time
 
@@ -15,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
-from routers import auth, system, lircd2uinput, vdr, log
+from routers import auth, system, lircd2uinput, vdr, log, audio
 from tools import state, systeminfo
 from tools.sse import SSE_StreamingResponse
 
@@ -136,6 +135,7 @@ app.include_router(system.router)
 app.include_router(lircd2uinput.router)
 app.include_router(vdr.router)
 app.include_router(log.router)
+app.include_router(audio.router)
 
 
 # catch all redirect
