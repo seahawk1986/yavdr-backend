@@ -1,9 +1,10 @@
+import logging
 import time
 from typing import List
 
-import pydbus
+import sdbus
 from fastapi import APIRouter, Depends
-from gi.repository import GLib
+# from gi.repository import GLib
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -12,17 +13,21 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
-from tools.dbus import pydbus_error_handler
+from interfaces.lircd2uinput import DeYavdrLircd2uinputInterface
+# from tools.dbus import pydbus_error_handler
+
 
 router = APIRouter()
-system_bus = pydbus.SystemBus()
+# system_bus = pydbus.SystemBus()
+system_bus = sdbus.sd_bus_open_system()
+_lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
 
 
-class Key(BaseModel):
+class SingleKeyData(BaseModel):
     key: str
 
 
-class Keys(BaseModel):
+class MultipleKeyData(BaseModel):
     keys: List[str]
 
 
@@ -44,17 +49,18 @@ class Message(BaseModel):
         },
     },
 )
-def hitkey(*, key: Key):
+async def hitkey(*, key_data: SingleKeyData):
+    key = key_data.key
     try:
-        key = key.key
         if key:
             key = key.upper()
-            lircd2uinput = system_bus.get("de.yavdr.lircd2uinput", "/control")
-            success, key_code = lircd2uinput.emit_key(key)
+            # lircd2uinput = system_bus.get("de.yavdr.lircd2uinput", "/control")
+            success, key_code = await _lird2uinput.emit_key(key)
         else:
             success = False
-            key_code = None
-    except GLib.Error:
+            # key_code = None
+    except Exception as _err:
+        logging.exception(f"could not send {key}")
         return JSONResponse(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             content={"msg": "lircd2uinput is not available"},
@@ -81,28 +87,27 @@ def hitkey(*, key: Key):
         },
     },
 )
-def hitkeys(*, keys: Keys):
+async def hitkeys(*, keys: MultipleKeyData):
+    key_list: List[str] = keys.keys
     try:
-        keys = keys.keys
-        if keys:
-            for key in keys:
+        if key_list:
+            for key in key_list:
                 key = key.upper()
-                lircd2uinput = system_bus.get("de.yavdr.lircd2uinput", "/control")
-                success, key_code = lircd2uinput.emit_key(key)
+                # lircd2uinput = system_bus.get("de.yavdr.lircd2uinput", "/control")
+                success, key_code = await _lird2uinput.emit_key(key)
                 if not success:
-                    break
+                    return JSONResponse(
+                        status_code=HTTP_400_BAD_REQUEST, content={"msg": f"unknown key '{key}'"},
+                    )
                 time.sleep(0.1)
         else:
             success = False
-            key_code = None
-    except GLib.Error:
+    except Exception as err:
+        logging.exception("could not send keypresses")
         return JSONResponse(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
-            content={"msg": "lircd2uinput is not available"},
+            content={"msg": f"lircd2uinput is not available: {err}"},
         )
-    if success:
-        return JSONResponse(status_code=HTTP_200_OK, content={"msg": "ok", "key": key},)
     else:
-        return JSONResponse(
-            status_code=HTTP_400_BAD_REQUEST, content={"msg": "unknown key"},
-        )
+        return JSONResponse(status_code=HTTP_200_OK, content={"msg": "ok", "keys": keys},)
+

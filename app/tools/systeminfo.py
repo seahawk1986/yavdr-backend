@@ -42,7 +42,7 @@ def bytes2human(n) -> HumanReadable:
 def add_human_readable(dictionary) -> None:
     keys = dictionary.keys()
     for key in list(keys):
-        if isinstance(dictionary[key], int) and key != "percent":
+        if isinstance(dictionary[key], int) or isinstance(dictionary[key], float) and key != "percent":
             dictionary[key + "_human"] = bytes2human(dictionary[key])
 
 
@@ -68,7 +68,7 @@ def disk_usage(all=False) -> List[DiskUsageValues]:
         return usage
 
     partitions = psutil.disk_partitions(all=False)
-    return [build_dict(p) for p in partitions if not p.device.startswith("/dev/loop")]
+    return [build_dict(p) for p in partitions if not (p.device.startswith("/dev/loop") or "/home/vdr" in p.mountpoint or "/snap/" in p.mountpoint)]
 
 
 class MemoryUsage(BaseModel):
@@ -196,7 +196,7 @@ def sensors_fans() -> Fans:
     return Fans(sensors=fan_data)
 
 
-def system_alias() -> List[str]:
+def system_alias() -> tuple[str, str, str]:
     return platform.system_alias(
         platform.system(), platform.release(), platform.version()
     )

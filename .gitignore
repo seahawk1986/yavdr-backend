@@ -4,4 +4,5 @@ mitogen-*
 *.pyc
 node_modules/
 .new-venv/
+.venv-3.12/*
 app/static/

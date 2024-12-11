@@ -3,6 +3,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+import sdbus
+import sdbus.exceptions
 from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_200_OK,
@@ -11,10 +13,12 @@ from starlette.status import (
 )
 
 from .auth import get_current_active_user, User
-from tools.dbus import pydbus_error_handler
-from tools.sound import get_pulseaudio_sinks, set_pulseaudio_default_sink
+from interfaces.pulsedbusctl import OrgYavdrPulseDBusCtlInterface
+
 
 router = APIRouter()
+
+# bus = sdbus.sd_bus_open_system()
 
 
 # TODO: Move to common file (duplicate in vdr.py and others)
@@ -23,7 +27,7 @@ class Message(BaseModel):
 
 
 class Sink(BaseModel):
-    Sink: str
+    sink: str
 
 
 class PortActiveEnum(str, Enum):
@@ -40,16 +44,48 @@ class PulseSink(BaseModel):
     number_of_channels: int
     volume_values: List[float]  # array of doubles
     port_active: PortActiveEnum  # string one of ["yes", "no", "unknown"]
+    is_default_sink: bool
 
 
-@pydbus_error_handler
-@router.get("/audio/list_pulseaudio_sinks", response_model=List[PulseSink])
-def list_pulseaudio_sinks(current_user: User = Depends(get_current_active_user)):
-    result = []
-    sinks = get_pulseaudio_sinks()
+class PulseResponse(BaseModel):
+    pulse_devices: List[PulseSink]
+    default_sink: str
+
+
+# @pydbus_error_handler
+@router.get("/audio/list_pulseaudio_sinks", response_model=PulseResponse)
+async def list_pulseaudio_sinks():  # *, current_user: User = Depends(get_current_active_user)):
+    pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
+        "org.yavdr.PulseDBusCtl",
+        "/org/yavdr/PulseDBusCtl",
+        bus=sdbus.sd_bus_open_system(),
+    )
+    devices = []
+    sinks, default_sink = await pulsectl.list_sinks()
     for s in sinks:
-        result.append(PulseSink(**{key: s[i] for i, key in enumerate(PulseSink.__fields__.keys())}))
-    return result
+        (
+            device,
+            device_name,
+            index,
+            muted,
+            number_of_channels,
+            volume_values,
+            port_active,
+            is_default_sink,
+        ) = s
+        devices.append(
+            PulseSink(
+                device=device,
+                device_name=device_name,
+                index=index,
+                muted=muted,
+                number_of_channels=number_of_channels,
+                volume_values=volume_values,
+                port_active=PortActiveEnum(port_active),
+                is_default_sink=is_default_sink,
+            )
+        )
+    return PulseResponse(pulse_devices=devices, default_sink=default_sink)
 
 
 @router.post(
@@ -66,17 +102,27 @@ def list_pulseaudio_sinks(current_user: User = Depends(get_current_active_user))
         },
     },
 )
-@pydbus_error_handler("dbus-pulsectl")
-def set_default_pulseaudio_sink(
+async def set_default_pulseaudio_sink(
     *, default_sink: Sink, current_user: User = Depends(get_current_active_user)
 ):
-    if set_pulseaudio_default_sink(default_sink.Sink):
+    bus = sdbus.sd_bus_open_system()
+    pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
+        "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
+    )
+    sink = default_sink.sink
+
+    try:
+        if await pulsectl.set_default_sink(sink_name=sink):
+            return JSONResponse(
+                status_code=HTTP_200_OK,
+                content={"msg": f"set {sink} as default sink"},
+            )
+        else:
+            return JSONResponse(
+                status_code=HTTP_400_BAD_REQUEST,
+                content={"msg": f"invalid device {sink}"},
+            )
+    except Exception as e:
         return JSONResponse(
-            status_code=HTTP_200_OK,
-            content={"msg": f"set {default_sink.Sink} as default sink"},
-        )
-    else:
-        return JSONResponse(
-            status_code=HTTP_400_BAD_REQUEST,
-            content={"msg": f"invalid device {default_sink.Sink}"},
+            status_code=HTTP_503_SERVICE_UNAVAILABLE, content={"msg": f"Error: {e}"}
         )

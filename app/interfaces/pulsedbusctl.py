@@ -13,7 +13,9 @@ class OrgYavdrPulseDBusCtlInterface(
     interface_name="org.yavdr.PulseDBusCtl",
 ):
     @dbus_method_async(
+        input_signature="",
         result_signature="(a(ssibiadsb)s)",
+        method_name="ListSinks",
     )
     async def list_sinks(
         self,

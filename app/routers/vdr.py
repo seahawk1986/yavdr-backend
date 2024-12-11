@@ -1,10 +1,16 @@
-from typing import List, Optional
-from functools import wraps
-from fastapi import APIRouter, Depends, HTTPException
+import datetime
+from pathlib import Path
+import subprocess
+from typing import Annotated, List, Optional
+import uuid
+from fastapi import APIRouter, Depends, File, UploadFile, WebSocket, WebSocketDisconnect
 
-import pydbus2vdr
-from gi.repository import GLib
+# from pydantic.errors import DataclassTypeError
+# from pydantic.main import BaseModel
+
+# import pydbus2vdr
 from pydantic import BaseModel
+import sdbus
 from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_200_OK,
@@ -13,52 +19,58 @@ from starlette.status import (
 )
 
 from .auth import get_current_active_user, User
-from tools import SVDRPClient, vdr_plugins
+from tools import SVDRPClient, vdr_plugin_config
+from interfaces.vdr_channels import DeTvdrVdrChannelInterface
+from interfaces.vdr_epg import DeTvdrVdrEpgInterface
+from interfaces.vdr_plugins import DeTvdrVdrPluginmanagerInterface
+from interfaces.vdr_recordings import DeTvdrVdrRecordingInterface
+from interfaces.vdr_timers import DeTvdrVdrTimerInterface
+
+
+# from tools.epg import DVB_CONTENT_NIBBLE, DVB_DATA_TYPE, DVB_SERVICE_TYPE
 
 router = APIRouter()
-
-vdr = None
 
 
 class Message(BaseModel):
     msg: str
 
 
-def set_vdr(vdr):
-    if vdr is None:
-        try:
-            vdr = pydbus2vdr.DBus2VDR()
-        except GLib.Error:
-            # Don't stop if vdr has no dbus interface
-            vdr = None
-            print("could not init pydbus2vdr.DBus2VDR :(")
-    return vdr
+# def set_vdr(vdr):
+#     if vdr is None:
+#         try:
+#             vdr = pydbus2vdr.DBus2VDR()
+#         except GLib.Error:
+#             # Don't stop if vdr has no dbus interface
+#             vdr = None
+#             print("could not init pydbus2vdr.DBus2VDR :(")
+#     return vdr
 
 
-def dbus_error_wrapper(f):
-    global vdr
-    vdr = set_vdr(vdr)
+# def dbus_error_wrapper(f):
+#     global vdr
+#     vdr = set_vdr(vdr)
 
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        try:
-            return f(*args, **kwds)
-        except (AttributeError, GLib.GError):
-            global vdr
-            vdr = set_vdr(None)
-            try:
-                return f(*args, **kwds)
-            except (AttributeError, GLib.GError):
-                raise HTTPException(status_code=503, detail="VDR did not respond")
+#     @wraps(f)
+#     def wrapper(*args, **kwds):
+#         try:
+#             return f(*args, **kwds)
+#         except (AttributeError, GLib.GError):
+#             global vdr
+#             vdr = set_vdr(None)
+#             try:
+#                 return f(*args, **kwds)
+#             except (AttributeError, GLib.GError):
+#                 raise HTTPException(status_code=503, detail="VDR did not respond")
 
-    return wrapper
+#     return wrapper
 
 
 class Recordings(BaseModel):
     RecNum: int
     Path: str
     Name: str
-    FullName: Optional[str]
+    FullName: Optional[str] = None
     Title: str
     title: str  # this is either InfoTitle or Name
     searchTitle: str
@@ -74,26 +86,31 @@ class Recordings(BaseModel):
     IsPesRecording: bool
     IsNew: bool
     IsEdited: bool
-    InfoChannelID: Optional[str]
-    InfoChannelName: Optional[str]
-    InfoTitle: Optional[str]
-    InfoShortText: Optional[str]
-    InfoDescription: Optional[str]
-    InfoAux: Optional[str]
-    InfoFramesPerSecond: Optional[str]
+    InfoChannelID: Optional[str] = None
+    InfoChannelName: Optional[str] = None
+    InfoTitle: Optional[str] = None
+    InfoShortText: Optional[str] = None
+    InfoDescription: Optional[str] = None
+    InfoAux: Optional[str] = None
+    InfoFramesPerSecond: Optional[float] = None
 
 
 @router.get("/vdr/recordings", response_model=List[Recordings])
-@dbus_error_wrapper
-def get_vdr_recordings(*, current_user: User = Depends(get_current_active_user)):
+async def get_vdr_recordings():  # *, current_user: User = Depends(get_current_active_user)):
+    vdr_recordings = DeTvdrVdrRecordingInterface.new_proxy(
+        "de.tvdr.vdr", "/Recordings", bus=sdbus.sd_bus_open_system(),
+    )
     recordings = []
-    for n, r in vdr.Recordings.List():
+    for n, r in await vdr_recordings.list():
         try:
             new_rec = {}
-            for (k, v) in r:
+            for k, v in r:
                 k = k.replace("/", "")
-                # print(k, v)
-                new_rec[k] = v
+                # print(k, v, type(v))
+                if isinstance(v, tuple):
+                    new_rec[k] = v[-1]
+                else:
+                    new_rec[k] = v
             new_rec["RecNum"] = int(n)
 
             ls = new_rec["LengthInSeconds"]
@@ -111,9 +128,9 @@ def get_vdr_recordings(*, current_user: User = Depends(get_current_active_user))
             new_rec["searchTitle"] = title.lower()
             recordings.append(new_rec)
         except Exception as err:
-            print(err)
+            print("Error:", err)
     # print(recordings)
-    return recordings
+    return sorted(recordings, key=lambda r: r.get("Start"), reverse=True)
 
 
 class RecNum(BaseModel):
@@ -135,6 +152,11 @@ def getSVDRP_Recording_ID_by_name(title):
                 return rec_id
 
 
+class ReplayData(BaseModel):
+    RecNum: int
+    continue_replay: int
+
+
 @router.post(
     "/vdr/recordings/play",
     responses={
@@ -149,15 +171,17 @@ def getSVDRP_Recording_ID_by_name(title):
         },
     },
 )
-@dbus_error_wrapper
-def play_recording(
-    *, rec_num: RecNum, current_user: User = Depends(get_current_active_user)
+async def play_recording(
+    *, data: ReplayData, current_user: User = Depends(get_current_active_user)
 ):
-    print("play_recording called with", rec_num)
+    vdr_recordings = DeTvdrVdrRecordingInterface.new_proxy(
+        "de.tvdr.vdr", "/Recordings", bus=sdbus.sd_bus_open_system(),
+    )
+    print("play_recording called with", data)
 
-    rec_num = int(rec_num.RecNum)
+    rec_num = data.RecNum
     if rec_num >= 0:
-        success = vdr.Recordings.Play(rec_num, -1)
+        success = await vdr_recordings.play(("i", rec_num), ("i", data.continue_replay))
         print("got response for playing rec by num:", success)
     else:
         success = False
@@ -169,10 +193,39 @@ def play_recording(
         )
 
 
+class Plugin(BaseModel):
+    name: str
+    version: str
+
+
 @router.get("/vdr/plugins")
-@dbus_error_wrapper
-def get_vdr_plugins(current_user: User = Depends(get_current_active_user)):
-    return [p._asdict() for p in vdr.Plugins.list()]
+async def get_vdr_plugins(
+    *, current_user: User = Depends(get_current_active_user)
+) -> list[Plugin]:
+    vdr_plugins = DeTvdrVdrPluginmanagerInterface.new_proxy(
+        "de.tvdr.vdr", "/Plugins", bus=sdbus.sd_bus_open_system()
+    )
+    plugins = await vdr_plugins.list()
+    return [Plugin(name=n, version=v) for n, v in plugins]
+
+
+@router.get("/vdr/current_epg")
+async def get_current_epg(current_user: User = Depends(get_current_active_user)):
+    vdr_epg = DeTvdrVdrEpgInterface.new_proxy("de.tvdr.vdr", "/EPG", bus=sdbus.sd_bus_open_system())
+    data = await vdr_epg.now("")
+    return data
+
+
+@router.get("/vdr/current_channel_epg")
+async def get_current_channel_epg(
+    current_user: User = Depends(get_current_active_user),
+):
+    vdr_channels = DeTvdrVdrChannelInterface.new_proxy("de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system())
+    vdr_epg = DeTvdrVdrEpgInterface.new_proxy("de.tvdr.vdr", "/EPG", bus=sdbus.sd_bus_open_system())
+    _, current_channel = await vdr_channels.current()
+    print(f"current channel: {current_channel}")
+    data = await vdr_epg.now(current_channel), await vdr_epg.next(current_channel)
+    return data
 
 
 class Timer(BaseModel):
@@ -180,7 +233,7 @@ class Timer(BaseModel):
     raw: str
     channel: str
     channelname: str
-    day: str
+    day: int
     start: int
     stop: int
     time: str
@@ -190,17 +243,48 @@ class Timer(BaseModel):
     aux: str
 
 
+class ChannelData(BaseModel):
+    name: str
+    freq: int
+    params: str
+    source: str
+    srate: int
+    vpid: int
+    apid: int
+    tpid: int
+    ca: int
+    sid: int
+    nid: int
+    tid: int
+    rid: int
+
+
 @router.get("/vdr/timers", response_model=List[Timer])
-@dbus_error_wrapper
-def get_vdr_timers(current_user: User = Depends(get_current_active_user)):
-    timers = vdr.Timers.List()
-    channels_raw, *_ = vdr.Channels.List()
+async def get_vdr_timers(*, current_user: User = Depends(get_current_active_user)):
+    vdr_channels = DeTvdrVdrChannelInterface.new_proxy("de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system())
+    vdr_timers = DeTvdrVdrTimerInterface.new_proxy("de.tvdr.vdr", "/Timers", bus=sdbus.sd_bus_open_system())
+    timers = (
+        await vdr_timers.list()
+    )  # TODO: do we want to use the more detailed vdr.Timers.ListDetailed ?
+    channels_raw, *_ = await vdr_channels.list("")
     channel_ids = {}
     for channel in channels_raw:
         chan_num, chan_str = channel
-        name, freq, params, source, srate, vpid, apid, tpid, ca, sid, nid, tid, rid = chan_str.split(
-            ":"
-        )
+        (
+            name,
+            freq,
+            params,
+            source,
+            srate,
+            vpid,
+            apid,
+            tpid,
+            ca,
+            sid,
+            nid,
+            tid,
+            rid,
+        ) = chan_str.split(":")
         if nid == "0" and tid == "0":
             if source.startswith("S"):
                 offsets = {"H": 10000, "V": 20000, "L": 30000, "R": 40000}
@@ -233,6 +317,10 @@ def get_vdr_timers(current_user: User = Depends(get_current_active_user)):
         ) = timer.split(":")
 
         time = f"{start[:2]}:{start[2:]} - {stop[:2]}:{stop[2:]}"
+        start = datetime.datetime.strptime(
+            f"{day} {start}", "%Y-%m-%d %H%M"
+        ).timestamp()
+        stop = datetime.datetime.strptime(f"{day} {stop}", "%Y-%m-%d %H%M").timestamp()
 
         t_data.append(
             Timer(
@@ -240,9 +328,9 @@ def get_vdr_timers(current_user: User = Depends(get_current_active_user)):
                     "raw": timer,
                     "status": int(status),
                     "channel": channel,
-                    "day": day,
-                    "start": int(start),
-                    "stop": int(stop),
+                    "day": start,
+                    "start": start,
+                    "stop": stop,
                     "time": time,
                     "priority": int(priority),
                     "lifetime": int(lifetime),
@@ -257,91 +345,259 @@ def get_vdr_timers(current_user: User = Depends(get_current_active_user)):
 
 class Channel(BaseModel):
     number: int
+    channel_id: str
     channel_string: str
     is_group: bool
+    is_radio: bool
     name: str
     provider: str = ""
-    ca: str = '0000'
+    ca: str = "0000"
     source: str
 
 
 @router.get("/vdr/channels")
-@dbus_error_wrapper
-def get_vdr_channels(
-    current_user: User = Depends(get_current_active_user)
-) -> List[Channel]:
+async def get_vdr_channels(
+    current_user: User = Depends(get_current_active_user),
+):
+    vdr_channels = DeTvdrVdrChannelInterface.new_proxy("de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system())
+
     channels = []
-    channels_raw, *_ = vdr.Channels.List()
+    channels_raw, status_code, message = await vdr_channels.list(":groups")
+    print(f"{channels_raw=}")
     for channel in channels_raw:
+        print(f"{channel=}")
         chan_num, chan_str = channel
         channels.append({"channel_number": chan_num, "channel_string": chan_str})
     return channels
+
+
+@router.post("/vdr/channels")
+def save_vdr_channels(channel_list: list[str]):
+    print(channel_list)
+    channels_conf = "/tmp/channels.conf"  # TODO: make this location configurable resp. read it from VDR
+    r = subprocess.run(
+        ["pkg-config", "vdr", "--variable=configdir"],
+        universal_newlines=True,
+        capture_output=True,
+    )
+    print(config_dir := r.stdout)
+    # TODO: stop vdr - can we do this as an ansible run command?
+    # write channels.conf
+    with open(channels_conf, "w") as f:
+        f.writelines(channel_list)
+
+    # TODO: start vdr again (if it was stopped)
+
+
+@router.post("/vdr/channels", response_model=tuple[bool, str])
+def upload_vdr_channels(
+    channels: list[str], current_user: User = Depends(get_current_active_user)
+):
+    for c in channels:
+        print(c)
+    return True, "ok"
+
+@router.post("/vdr/channelfile")
+async def upload_channels_conf(file: UploadFile) -> bool:
+    tmp = Path('/var/cache/yavdr-webfrontend/channel_lists/')
+    tmp.mkdir(parents=True, exist_ok=True)
+    print(f"{file.filename} {file.size}")
+    if not file.filename:
+        file.filename = "channels.conf"
+    content = await file.read()
+    # TODO: validate channels.conf
+    (p := (tmp / file.filename)).write_bytes(content)
+    print(f"wrote file {p}")
+    return True
+
 
 
 @router.get("/vdr/channels_with_groups", response_model=List[Channel])
 def get_vdr_channels_with_groups(current_user: User = Depends(get_current_active_user)):
     channels = []
     with SVDRPClient("localhost", 6419) as svdrp:
-        for r in svdrp.send_cmd_and_get_response("lstc :groups"):
-            number, channel_string = r.split(maxsplit=1)
-            if channel_string.startswith(':'):  # channel group
-                if channel_string[1] == '@':  # group number with channel number
-                    group_number, name = channel_string[2:].split(" ", maxsplit=1)
+        for r in svdrp.send_cmd_and_get_response("lstc :ids :groups"):
+            # print(r)
+            # GROUP_RE = re.compile(r'(?P<number>\d+)\s:((?P<group_offset>@\d+)\s)?(?P<group_name>.+)')
+            # TODO: make channel group parsing work
+            number, other = r.split(maxsplit=1)
+            if other.startswith(":"):  # check for channel group
+                if other[1] == "@":
+                    # group with offset value
+                    offset, group_name = other[2:].split(maxsplit=1)
+                    offset = int(offset)
                 else:
-                    name = channel_string[1:]
+                    # group without offset
+                    group_name = other[1:]
+                    offset = 0
 
-                channels.append(
-                    Channel(
-                        number=number,
-                        channel_string=channel_string,
-                        is_group=True,
-                        name=name,
-                        ca=0,
-                        provider="",
-                        source="",
-                    ))
+                group = Channel(
+                    number=offset,
+                    channel_id=f"{group_name}-{number}-{uuid.uuid4()}",
+                    channel_string=f":{f'@{offset} ' if offset else ''}{group_name}",
+                    is_group=True,
+                    is_radio=False,
+                    name=group_name,
+                    ca="0",
+                    provider="",
+                    source="",
+                )
+                # print("got group:", group)
+                channels.append(group)
             else:
+                channel_id, other = other.split(maxsplit=1)
+                # channel entry
                 try:
-                    name, frequency, parameters, source, srate, vpid, apid, tpid, ca, sid, nid, tid, rid, *channel_data = channel_string.split(":")
-                except Exception as err:
-                    print(f"could not process {channel_string=}")
-                    print(err)
+                    (
+                        name,
+                        frequency,
+                        parameters,
+                        source,
+                        srate,
+                        vpid,
+                        apid,
+                        tpid,
+                        ca,
+                        sid,
+                        nid,
+                        tid,
+                        rid,
+                        *channel_data,
+                    ) = other.split(":")
 
-                number = int(number)
-                name, _, provider = name.partition(';')
-                name, _, short_name = name.partition(',')
+                    number = int(number)
+                    name, _, provider = name.partition(";")
+                    name, _, short_name = name.partition(",")
+                    # if nid == "0" and sid == "0":
+                    #     # If a channel has both NID and TID set to 0,
+                    #     # the channel ID will use the Frequency instead of the TID.
+                    #     # For satellite channels an additional offset of
+                    #     # 100000, 200000, 300000 or 400000 is added to that number,
+                    #     # depending on the Polarization (H, V, L or R, respectively).
+                    #     # This is necessary because on some satellites the same
+                    #     # frequency is used for two different transponders, with opposite polarization.
+                    #     tf = frequency
+                    #     while tf > 20000:
+                    #         tf /= 1000
+                    #     if source.startswith("S") and parameters:
+                    #         match parameters[0]:
+                    #             case "H":
+                    #                 tf += 100000
+                    #             case "V":
+                    #                 tf += 200000
+                    #             case "L":
+                    #                 tf += 300000
+                    #             case "R":
+                    #                 tf += 400000
+                    #     tid = tf
+                    # channel_id = f"{source}-{nid}-{tid}-{sid}-{rid}"
+                except Exception as err:
+                    print(f"could not process {other=}")
+                    print(err)
+                    continue
+
+                is_radio = False
+                try:
+                    radio_vpid = int(vpid)
+                    if radio_vpid <= 1:
+                        is_radio = True
+                except ValueError:
+                    pass
 
                 channels.append(
-                    Channel(
+                    c := Channel(
                         number=number,
-                        channel_string=channel_string,
+                        channel_id=channel_id,
+                        channel_string=other,
                         is_group=False,
+                        is_radio=is_radio,
                         name=name,
                         provider=provider,
                         source=source,
                         ca=ca,
                     )
                 )
+                print(c)
     return channels
 
 
-@router.get("/vdr/plugin_config", response_model=List[vdr_plugins.PluginConfig])
-def get_plugin_config(current_user: User = Depends(get_current_active_user)):
-    return list(vdr_plugins.read_plugins())
+@router.delete("/vdr/channels/{channel_id}")
+def delete_channel(channel_id: str, User=Depends(get_current_active_user)):
+    with SVDRPClient("localhost", 6419) as svdrp:
+        response = svdrp.send_cmd_and_get_response(f"DELC {channel_id}")
+        for line in response:
+            print(line)
 
 
-@router.post("/vdr/plugin_config",
+@router.get("/vdr/plugin_config", response_model=List[vdr_plugin_config.PluginConfig])
+async def get_plugin_config(current_user: User = Depends(get_current_active_user)):
+    return list(vdr_plugin_config.read_plugins().values())
+
+
+@router.post(
+    "/vdr/plugin_config",
     responses={
         HTTP_200_OK: {
             "model": Message,
             "description": "config written successfully",
         },
-        HTTP_400_BAD_REQUEST: {"model": Message, "description": "invalid rec number"},
+        HTTP_400_BAD_REQUEST: {"model": Message, "description": "invalid arguments"},
         HTTP_503_SERVICE_UNAVAILABLE: {
             "model": Message,
             "description": "vdr is not available",
         },
     },
 )
-def write_plugin_config(current_user: User = Depends(get_current_active_user)):
-    return 
+
+class PluginConfig(BaseModel):
+    name: str
+    priority: int
+    is_enabled: bool
+    config: list[str] | str
+
+def write_plugin_config(plugin_configs: list[PluginConfig], current_user: User = Depends(get_current_active_user)):
+    for p in plugin_configs:
+        if p.is_enabled:
+            # TODO: link from AVAILDIR to CONFDIR
+            ...
+        config_str = '\n'.join(p.config) if isinstance(p.config, list) else p.config
+
+        
+
+    return
+
+
+@router.websocket("/vdr/svdrp/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # TODO: establish connection with VDR if needed, communicate with VDR, return answer
+            # we need to keep track of the command sent by the client -
+            # so establishing a new session per request is probably the easiest method
+            # on the other hand this slows things down - can we keep a session alive for each client?
+            # Also do we need to check the response in the proxy or can we just pass things along?
+            # SVDRP response codes
+            # 214 Hilfetext
+            # 215 EPG Eintrag
+            # 216 Image grab data (base 64)
+            # 220 VDR-Service bereit
+            # 221 VDR-Service schließt Sende-Kanal
+            # 250 Angeforderte Aktion okay, beendet
+            # 354 Start senden von EPG-Daten
+            # 451 Angeforderte Aktion abgebrochen: lokaler Fehler bei der Bearbeitung
+            # 500 Syntax-Fehler, unbekannter Befehl
+            # 501 Syntax-Fehler in Parameter oder Argument
+            # 502 Befehl nicht implementiert
+            # 504 Befehls-Parameter nicht implementiert
+            # 550 Angeforderte Aktion nicht ausgeführt
+            # 554 Transaktion fehlgeschlagen
+            #
+            # can we reuse a once established connection?
+            await websocket.send_text(f"got {data}")
+    except WebSocketDisconnect:
+        print("Websocket connection lost")

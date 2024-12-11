@@ -6,5 +6,7 @@ This is the second attempt building a restful backend for yavdr-ansible, but thi
 The methods in this route provide the means to log in and authenticate an user by cookie or a JWT.
 ** System
 The methods in this route provide system information
+** Audio
+The methods in this route provide audio output information and settings
 ** VDR
 This route provides vdr-related informations

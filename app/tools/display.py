@@ -1,4 +1,3 @@
-import pydbus
 import subprocess
 
 

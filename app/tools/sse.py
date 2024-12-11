@@ -1,7 +1,9 @@
+import asyncio
 import typing
 from fastapi.responses import StreamingResponse
 from fastapi import BackgroundTasks
 from starlette.types import Send, Scope, Receive
+from starlette.concurrency import run_until_first_complete
 
 
 class SSE_StreamingResponse(StreamingResponse):
