@@ -51,10 +51,6 @@ class PulseSink(BaseModel):
     port_is_active: PortActive
     is_default_sink: bool
 
-
-
-
-
 # pulse_dbus_ctl = OrgYavdrPulseDBusCtlInterface.new_proxy('org.yavdr.PulseDBusCTL', '/org/yavdr/PulseDBusCtl')
 
 router = APIRouter()

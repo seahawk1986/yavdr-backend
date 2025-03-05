@@ -1,14 +1,16 @@
 import datetime
+from enum import StrEnum
 from pathlib import Path
 import subprocess
-from typing import Annotated, List, Optional
+from typing import Annotated, Any, List, Optional
 import uuid
-from fastapi import APIRouter, Depends, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, UploadFile, WebSocket, WebSocketDisconnect
 
 # from pydantic.errors import DataclassTypeError
 # from pydantic.main import BaseModel
 
 # import pydbus2vdr
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import sdbus
 from starlette.responses import JSONResponse
@@ -25,6 +27,8 @@ from interfaces.vdr_epg import DeTvdrVdrEpgInterface
 from interfaces.vdr_plugins import DeTvdrVdrPluginmanagerInterface
 from interfaces.vdr_recordings import DeTvdrVdrRecordingInterface
 from interfaces.vdr_timers import DeTvdrVdrTimerInterface
+from interfaces.vdr_setup import DeTvdrVdrSetupInterface
+from interfaces.vdr_skin import DeTvdrVdrSkinInterface
 
 
 # from tools.epg import DVB_CONTENT_NIBBLE, DVB_DATA_TYPE, DVB_SERVICE_TYPE
@@ -505,7 +509,7 @@ def get_vdr_channels_with_groups(current_user: User = Depends(get_current_active
                     pass
 
                 channels.append(
-                    c := Channel(
+                    Channel(
                         number=number,
                         channel_id=channel_id,
                         channel_string=other,
@@ -517,7 +521,6 @@ def get_vdr_channels_with_groups(current_user: User = Depends(get_current_active
                         ca=ca,
                     )
                 )
-                print(c)
     return channels
 
 
@@ -601,3 +604,145 @@ async def websocket_endpoint(
             await websocket.send_text(f"got {data}")
     except WebSocketDisconnect:
         print("Websocket connection lost")
+
+class AudioChannel(BaseModel):
+    number: int
+    desc: str
+    selected: bool
+
+@router.get("/vdr/audiochannel")
+def get_audiochannels() -> list[AudioChannel]:
+    with SVDRPClient("localhost", 6419) as svdrp:
+        audio_options = []
+        for line in svdrp.send_cmd_and_get_response('AUDI'):
+            try:
+                option_nr, desc, sel = line.split(maxsplit=2)
+                n = int(option_nr)
+                selected = True if sel.startswith('*') else False
+                audio_options.append({'number': n, 'desc': desc, 'selected': selected})
+            except Exception as e:
+                print("failed to parse response:", e)
+            
+    return audio_options
+
+@router.post("/vdr/audiochannel")
+def set_audiochannel(channel: int):
+    with SVDRPClient("localhost", 6419) as svdrp:
+        r = []
+        for line in svdrp.send_cmd_and_get_response(f'AUDI {channel}'):
+            if line.startswith(f"{channel} "):
+                r.append(line)
+    return True, "".join(r)
+
+
+class StringEntry(BaseModel):
+    name: str
+    value: str
+    max_value: int
+
+class ThreeIntEntry(BaseModel):
+    name: str
+    value: int
+    min_value: int
+    max_value: int
+
+class Int64Entry(BaseModel):
+    name: str
+    value: int
+
+VDRSetupEntry = StringEntry|ThreeIntEntry|Int64Entry
+
+
+@router.get('/vdr/setup')
+async def get_setup(key: str|None = None) -> list[VDRSetupEntry]|Any:
+    bus = sdbus.sd_bus_open_system()
+    setup_proxy = DeTvdrVdrSetupInterface.new_proxy('de.tvdr.vdr','/Setup', bus)
+    if key is None:
+        setup_data = await setup_proxy.list()
+        revised_data: list[VDRSetupEntry] = []
+        for (name, values) in setup_data:
+            # print(f"{name}: {values[0]=}: {values[1]=}")
+            match(values[0]):
+                case '(iii)':
+                    value, min_value, max_value = values[1]
+                    e = ThreeIntEntry(name=name, value=value, min_value=min_value, max_value=max_value)
+                    revised_data.append(e)
+                case '(si)':
+                    value, max_value = values[1]
+                    e = StringEntry(name=name, value=value, max_value=max_value)
+                    revised_data.append(e)
+                case 'x':
+                    value = values[1]
+                    e = Int64Entry(name=name, value=value)
+                    revised_data.append(e)
+                case _:
+                    print(f"unkown data: {values}")
+        return revised_data
+    else:
+        (s, value), r, m = await setup_proxy.get(key)
+        return value
+
+
+@router.post('/vdr/setup')
+async def set_setup(key: str, value: int|str):
+    bus = sdbus.sd_bus_open_system()
+    setup_proxy = DeTvdrVdrSetupInterface.new_proxy('de.tvdr.vdr','/Setup', bus)
+    setup_data = await setup_proxy.list()
+    for name, values in setup_data:
+        if name == key:
+            signature, _ = values
+            s_type = signature.lstrip('(')[0]
+            print(f"sending {key=}, ({s_type=}, {value=})")
+            if s_type in ('i', 'x'):
+                value = int(value)
+            r, m = await setup_proxy.set(key, (s_type, value))
+            print(r, m)
+            return r, m
+
+
+class VDRSkin(BaseModel):
+    index: int
+    name: str
+    description: str
+
+@router.get('/vdr/skins')
+async def get_skins():
+    bus = sdbus.sd_bus_open_system()
+    skin_proxy = DeTvdrVdrSkinInterface.new_proxy('de.tvdr.vdr','/Skin', bus)
+    code, data = await skin_proxy.list_skins()
+    if code == 900:
+        # print(data)
+        skins = [
+            VDRSkin(index=index, name=name, description=description) for
+            index, name, description in data
+        ]
+        return skins
+    
+class AllowedConfigfiles(StrEnum):
+    CHANNELS = "channels.conf"
+    REMOTE = "remote.conf"
+    KEYMACROS = "keymacros.conf"
+    DISQC = "diseqc.conf"
+    SOURCES = "sources.conf"
+    SETUP = "setup.conf"
+
+
+@router.get('/vdr/configfile')
+async def get_configfile(filename: AllowedConfigfiles):
+    print(f"got request for {filename=}")
+    VDR_CONFIG_DIR = Path('/var/lib/vdr')
+    return FileResponse(VDR_CONFIG_DIR/filename)
+
+@router.post('/vdr/configfile/{filename}')
+async def upload_configfile(filename: AllowedConfigfiles, file: UploadFile) -> bool:
+    # tmp = Path('/var/cache/yavdr-webfrontend/channel_lists/')
+    # tmp.mkdir(parents=True, exist_ok=True)
+    BASEDIR = Path('/tmp/')
+    print(f"got {filename=} with {file.size=} and {file.content_type=}, {file.headers}")
+    content = await file.read()
+    # TODO: validate channels.conf
+    (p := (BASEDIR / filename)).write_bytes(content)
+    print(f"wrote file {p}")
+    return True
+
+    

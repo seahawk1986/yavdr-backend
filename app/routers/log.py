@@ -116,5 +116,6 @@ def download_log(start: str, end: str|None = None) -> StreamingResponse: # , cur
                 timestamp = datetime.datetime.fromisoformat(start.replace(' ', '+'))
                 r.seek_realtime(timestamp)
         for e in r:
-            yield f"{e['__REALTIME_TIMESTAMP']} {e['_HOSTNAME']}: {e['MESSAGE']}\n"
+            timestamp = e['__REALTIME_TIMESTAMP']
+            yield f"{timestamp.strftime("%b %d %H:%M:%S")} {e['_HOSTNAME']}: {e['MESSAGE']}\n"
     return StreamingResponse(iterlog(), headers=headers, media_type="text/plain")
