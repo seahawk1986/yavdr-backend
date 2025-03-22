@@ -3,7 +3,7 @@ import time
 from typing import List
 
 import sdbus
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 # from gi.repository import GLib
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
@@ -13,14 +13,14 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
-from interfaces.lircd2uinput import DeYavdrLircd2uinputInterface
+from app.interfaces.lircd2uinput import DeYavdrLircd2uinputInterface
 # from tools.dbus import pydbus_error_handler
 
 
 router = APIRouter()
 # system_bus = pydbus.SystemBus()
-system_bus = sdbus.sd_bus_open_system()
-_lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
+# system_bus = sdbus.sd_bus_open_system()
+# _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
 
 
 class SingleKeyData(BaseModel):
@@ -51,6 +51,9 @@ class Message(BaseModel):
 )
 async def hitkey(*, key_data: SingleKeyData):
     key = key_data.key
+    system_bus = sdbus.sd_bus_open_system()
+    _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
+
     try:
         if key:
             key = key.upper()
@@ -89,6 +92,9 @@ async def hitkey(*, key_data: SingleKeyData):
 )
 async def hitkeys(*, keys: MultipleKeyData):
     key_list: List[str] = keys.keys
+    system_bus = sdbus.sd_bus_open_system()
+    _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
+
     try:
         if key_list:
             for key in key_list:

@@ -102,7 +102,7 @@ def time_limits() -> tuple[datetime.datetime, datetime.datetime]:
 
 
 @router.get('/logs/download')
-def download_log(start: str, end: str|None = None) -> StreamingResponse: # , current_user: User = Security(get_current_active_user, scopes=["log"])
+def download_log(start: str, end: str|None = None, *, current_user: User = Security(get_current_active_user, scopes=["log"])) -> StreamingResponse:
     headers = {
         'Content-Disposition': "attachment; filename*=utf-8''{}".format(f"{start}_{hostname}_log.txt")
     }

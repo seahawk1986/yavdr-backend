@@ -2,7 +2,6 @@ import grp
 import pwd
 from datetime import datetime, timedelta
 from pytz import UTC
-from secrets import token_hex
 from typing import List
 
 import jwt
@@ -16,7 +15,7 @@ from jwt import PyJWTError
 from pydantic import BaseModel, Field, ValidationError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-import tools.pam as pam
+import app.tools.pam as pam
 
 router = APIRouter()
 

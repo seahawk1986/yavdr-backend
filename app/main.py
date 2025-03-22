@@ -1,37 +1,43 @@
 #!/usr/bin/env python3
 import asyncio
+from threading import Condition, Lock
 from contextlib import asynccontextmanager
 
-from threading import Condition, Lock
-
-# import sdbus
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from httpx import AsyncClient, Timeout
 from starlette.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
-from routers import auth, system, lircd2uinput, vdr, log, audio, channelpedia
-from tools import systeminfo
-from tools.sse import SSE_StreamingResponse
+from app.routers import auth, system, lircd2uinput, vdr, log, audio, channelpedia
+from app.tools import systeminfo
+from app.tools.sse import SSE_StreamingResponse
 
+load_dotenv()  # take environment variables from .env.
+timeout = Timeout(10.0, connect=5.0)
 
 @asynccontextmanager
 async def lifespan_handler(app: FastAPI):
+    # see https://fastapi.tiangolo.com/advanced/events/#lifespan
     print("callback on startup")
+    # Initialize a shared HTTP/2 client for the application
+    app.state.http_client = AsyncClient(http2=True, timeout=timeout)
     t = asyncio.create_task(systemstat_collector.run_update())
     yield
-    print("shutdown of the fastapu app")
+    print("shutdown of the fastapi app")
     t.cancel()
+    await app.state.http_client.aclose()
 
 
-# for production: think about locking down the docs:
+
+# NOTE: for production: think about locking down the docs:
 # app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 app = FastAPI(lifespan=lifespan_handler)
 
 # collect system stats continously
 systemstat_collector = systeminfo.SystemStatHistory()
-
 
 # TODO: do we want to limit this explicitly?
 # hostname = socket.gethostname()
@@ -58,7 +64,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
     """This method redirects to the openapi page of this app"""
@@ -66,10 +71,8 @@ async def redirect_to_docs():
 
 
 # mount the static ressources
-app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="app/static", html=True), name="static")
 
-# DBus callbacks
-# bus = pydbus.SessionBus()
 loop_control = {"stop_loops": False}
 condition = Condition()
 queue_lock = Lock()
@@ -110,10 +113,6 @@ async def process_signals() -> None: ...
 async def stream_messages():
     global active_clients
     return SSE_StreamingResponse(active_clients, media_type="text/event-stream")
-
-
-# TODO: https://fastapi.tiangolo.com/advanced/events/#lifespan
-# switch to lifespan events
 
 
 @app.get("/system/status", response_model=systeminfo.SystemData)

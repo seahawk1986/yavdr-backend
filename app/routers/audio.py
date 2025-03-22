@@ -13,7 +13,7 @@ from starlette.status import (
 )
 
 from .auth import get_current_active_user, User
-from interfaces.pulsedbusctl import OrgYavdrPulseDBusCtlInterface
+from app.interfaces.pulsedbusctl import OrgYavdrPulseDBusCtlInterface
 
 
 router = APIRouter()

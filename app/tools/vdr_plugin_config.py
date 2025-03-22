@@ -4,11 +4,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Generator, Iterable, List, Mapping, Tuple
 
-from pydantic import BaseModel, Extra  # , constr, conlist
+from pydantic import BaseModel
 
+from app.tools.vdr_config import VDR_AVAIL_DIR, VDR_ARGS_DIR
 
-VDR_CONFIG_DIR = Path("/etc/vdr/conf.avail/")
-VDR_ARGS_DIR = Path("/etc/vdr/conf.d/")
 RE_SECTION = re.compile(r"^\[(?P<plugin_name>[a-zA-Z-]*)\]")
 
 
@@ -58,12 +57,17 @@ def parse_config_file(path: Path) -> Mapping[str, List[str]]:
     return data
 
 
-def write_config_file(path: Path, data: List[str]) -> bool:
+def write_config_file(name: str, data: str) -> bool:
     """write configuration file"""
     # TODO: validate data, at least one leading "[NAME]" element is required before emtpy and non-comment lines
+    filename = f"{name}.conf"
+    argsdir_path = VDR_ARGS_DIR / filename
+    path = argsdir_path if argsdir_path.is_file() else VDR_AVAIL_DIR / filename  # TODO: do we want limit this to regular files?
+    if not path.exists():
+        print(f"file '{path}' does not exist, creating new files is not allowed")
+        return False
     try:
-        with open(path, "w") as f:
-            f.writelines(data)
+        path.write_text(f"[{name}]\n{data}")
     except IOError as err:
         print(f"writing config to {path=} failed: {err}")
         return False
@@ -108,7 +112,7 @@ def read_plugin_help(plugin_name: str | None = None) -> dict[str, str]:
 def read_plugins() -> dict[str, PluginConfig]:
     help_data = read_plugin_help()  # read the help output produced by vdr
 
-    available_configuration_files = set(VDR_CONFIG_DIR.glob("*.conf"))
+    available_configuration_files = set(VDR_AVAIL_DIR.glob("*.conf"))
     active_configuration_files = set(VDR_ARGS_DIR.glob("*.conf"))
 
     static_configuration_files = set(
@@ -127,11 +131,11 @@ def read_plugins() -> dict[str, PluginConfig]:
 
     # TODO: move to a file-based output instead of wildly combining data
 
-    available_plugins = set(VDR_CONFIG_DIR.glob("*.conf"))
+    available_plugins = set(VDR_AVAIL_DIR.glob("*.conf"))
     enabled_plugins_symlinks = [
         p
         for p in VDR_ARGS_DIR.glob("*.conf")
-        if p.is_symlink() and p.resolve().parent == VDR_CONFIG_DIR
+        if p.is_symlink() and p.resolve().parent == VDR_AVAIL_DIR
     ]
     priorities = {
         name: priority for name, priority in extract_name_prio(enabled_plugins_symlinks)

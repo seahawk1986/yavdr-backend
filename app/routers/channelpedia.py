@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from .auth import get_current_active_user, User
-from tools.channelpedia import get_categories, get_channel_group, get_channels
+from app.tools.channelpedia import get_categories, get_channel_group
 
 
 router = APIRouter()

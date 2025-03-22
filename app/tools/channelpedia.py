@@ -1,10 +1,10 @@
 from collections import defaultdict
-from typing import Mapping, Any
 import json
-import logging
 # import requests
 
 import aiohttp
+
+from .channel_interfaces import Channel, Subgroup, ChannelpediaSubgroup
 
 
 async def get_categories():
@@ -50,27 +50,32 @@ async def get_channels():
     return channel_data
 
 
-async def get_channel_group(source, position, group) -> list[Mapping[str, Any]]:
+
+
+async def get_channel_group(source, position, group) -> list[Subgroup]:
     url = f"http://channelpedia.yavdr.com/restful/channelgroups/{source}/{position}/{group}/all/json"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
-            data = (await resp.json())['result']
+            data: list[ChannelpediaSubgroup] = [ChannelpediaSubgroup(**subgroup) for subgroup in (await resp.json()).get('result', [])]
+
             return [
-                {
-                    "id": subgroup.get('x_label'),
-                    "title": subgroup.get('friendlyname'),
-                    "children": [
-                            {
-                                'channel_string': channel['string'],
-                                'channel_id': channel['parameters']['x_unique_id'],
-                                'is_group': False,
-                                'name': f"{channel['parameters']['name']}",
-                                'provider': f"{channel['parameters']['provider']}",
-                                'ca': f"{channel['parameters']['caid']}",
-                                'source':f"{channel['parameters']['source']}",
-                            } for channel in subgroup.get('channels', [])
-                        ]
-                } for subgroup in data
+                Subgroup(
+                    id=subgroup.x_label,
+                    title=subgroup.friendlyname,
+                    children=[
+                        Channel(
+                            channel_string=channel.string,
+                            channel_id=channel.parameters.x_unique_id,
+                            is_group=False,
+                            is_radio=channel.parameters.vpid in (0, '0'),
+                            name=f"{channel.parameters.name}",
+                            provider=f"{channel.parameters.provider}",
+                            ca=f"{channel.parameters.caid}",
+                            source=f"{channel.parameters.source}",
+                            number=9999,
+                            ) for channel in subgroup.channels
+                    ]
+                ) for subgroup in data
             ]
 
 

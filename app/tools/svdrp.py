@@ -6,6 +6,8 @@ import cchardet
 SVDRPResponse = namedtuple("SVDRPResponse", "code, cont, data")
 
 
+# TODO: replace with an asyncio version and without the obsolete telnet library
+
 # --------------------------------------------------------------------------- #
 # roughly based on https://kfalck.net/2011/01/08/autorecord-vdr-programs-via-svdrp/
 class SVDRPClient:
