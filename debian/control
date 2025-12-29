@@ -1,0 +1,20 @@
+Source: yavdr-backend
+Maintainer: Alexander Grothe <seahawk1986@gmx.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3, dpkg-dev, debhelper (>= 9), pybuild-plugin-pyproject
+Standards-Version: 4.5.1
+Rules-Requires-Root: no
+
+Package: yavdr-backend
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3,
+  python3-pydbus,
+  python3-fastapi,
+  python3-pydantic,
+  python3-ruamel.yaml,
+  python3-psutil,
+Description: Webfrontend for yaVDR
+  yavdr-webfrontend offers a configuration interface for a yaVDR system.
+  .
