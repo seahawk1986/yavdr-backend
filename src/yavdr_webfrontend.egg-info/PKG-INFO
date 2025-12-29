@@ -1,0 +1,22 @@
+Metadata-Version: 2.4
+Name: yavdr-webfrontend
+Version: 0.1.0
+Author-email: Alexander Grothe <seahawk1986@gmx.de>
+Requires-Python: >=3.12
+Requires-Dist: fastapi
+Requires-Dist: pydantic
+Requires-Dist: ansible
+Requires-Dist: pydbus
+Requires-Dist: ruamel.yaml
+Requires-Dist: uvicorn[standard]>=0.38.0
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: httpx[http2]>=0.28.1
+Requires-Dist: pytz>=2025.2
+Requires-Dist: pyjwt>=2.10.1
+Requires-Dist: pkgconfig>=1.5.5
+Requires-Dist: python-multipart>=0.0.21
+Requires-Dist: sdbus>=0.14.1.post0
+Requires-Dist: sse-starlette>=3.0.4
+Requires-Dist: ansible-runner>=2.4.2
+Requires-Dist: systemd-python>=235
+Requires-Dist: aiohttp>=3.13.2

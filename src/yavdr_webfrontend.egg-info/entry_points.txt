@@ -1,0 +1,3 @@
+[console_scripts]
+yavdr-webfrontend-backend = yavdr_backend.main:run_backend
+yavdr-webfrontend-system-backend = yavdr_backend.main:run_system_backend
