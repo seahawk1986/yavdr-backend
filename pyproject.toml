@@ -1,6 +1,6 @@
 [project]
 name = "yavdr-webfrontend"
-authors = [{"name" = "Alexander Grothe", "email" = "seahawk1986@gmx.de"}]
+authors = [{ "name" = "Alexander Grothe", "email" = "seahawk1986@gmx.de" }]
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
@@ -27,5 +27,5 @@ dependencies = [
 package = true
 
 [project.scripts]
-yavdr-webfrontend-backend = "yavdr_backend.main:run_backend"
-yavdr-webfrontend-system-backend = "yavdr_backend.main:run_system_backend"
+yavdr-backend = "yavdr_backend.main:run_backend"
+yavdr-system-backend = "yavdr_backend.system_backend:main"

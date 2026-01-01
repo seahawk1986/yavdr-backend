@@ -10,11 +10,12 @@ Package: yavdr-backend
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends},
   python3,
-  python3-pydbus,
+  python3-sdbus,
   python3-fastapi,
   python3-pydantic,
   python3-ruamel.yaml,
   python3-psutil,
+  uvicorn,
 Description: Webfrontend for yaVDR
   yavdr-webfrontend offers a configuration interface for a yaVDR system.
   .

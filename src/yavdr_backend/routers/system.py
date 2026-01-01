@@ -83,21 +83,25 @@ async def get_xorg_config() -> XorgConfig:
     return config
 
 @router.get('/system/xorg_facts')
-async def get_xorg_facts():
-    return FileResponse('/etc/ansible/facts.d/xorg.fact')
+async def get_xorg_facts() -> FileResponse:
+    return FileResponse('/etc/ansible/facts.d/xorg.fact',
+                        headers={"Cache-Control": "no-store"})
 
 
 @router.get('/system/xrandr_facts')
-async def get_xrandr_facts():
-    return FileResponse('/etc/ansible/facts.d/xrandr.fact')
+async def get_xrandr_facts() -> FileResponse:
+    return FileResponse('/etc/ansible/facts.d/xrandr.fact',
+                        headers={"Cache-Control": "no-store"})
 
 @router.get('/system/drm_facts')
-async def get_drm_facts():
-    return FileResponse('/etc/ansible/facts.d/drm.fact')
+async def get_drm_facts() -> FileResponse:
+    return FileResponse('/etc/ansible/facts.d/drm.fact',
+                        headers={"Cache-Control": "no-store"})
 
 @router.get('/system/xorg_config')
-async def get_xorg_config_facts():
-    return FileResponse('/etc/ansible/facts.d/xorg_config.fact')
+async def get_xorg_config_facts() -> FileResponse:
+    return FileResponse('/etc/ansible/facts.d/xorg_config.fact',
+                        headers={"Cache-Control": "no-store"})
 
 @router.post('/system/xorg_config')
 async def set_xorg_confg(config: XorgConfig, request: Request) -> EventSourceResponse:

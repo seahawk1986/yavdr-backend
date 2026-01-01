@@ -1,2 +1,2 @@
 #!/bin/bash
-exec sudo -H uv run backend.py
+exec sudo -H uv run yavdr-system-backend

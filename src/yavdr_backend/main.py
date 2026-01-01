@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import asyncio
+from collections.abc import Awaitable, Callable, Generator
 import logging
 from threading import Condition, Lock
 from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,11 +24,11 @@ load_dotenv()  # take environment variables from .env.
 timeout = Timeout(10.0, connect=5.0)
 
 @asynccontextmanager
-async def lifespan_handler(app: FastAPI):
+async def lifespan_handler(app: FastAPI) -> AsyncGenerator[None, None]:
     # see https://fastapi.tiangolo.com/advanced/events/#lifespan
     print("callback on startup")
     # Initialize a shared HTTP/2 client for the application
-    app.state.http_client = AsyncClient(http2=True, timeout=timeout)
+    app.state.http_client = AsyncClient(http2=True, timeout=timeout) # TODO: check if this requires a more advanced proxy setting in nginx
     t = asyncio.create_task(systemstat_collector.run_update())
     yield
     print("shutdown of the fastapi app")
@@ -43,36 +45,34 @@ app = FastAPI(lifespan=lifespan_handler)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
 	exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
 	logging.error(f"{request}: {exc_str}")
-	content = {'status_code': 10422, 'message': exc_str, 'data': None}
+	content: dict[str, Any] = {'status_code': 10422, 'message': exc_str, 'data': None}
 	return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+
+# tell the client not to cache repeated GET requests by default
+@app.middleware("http")
+async def disable_cache(request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+    response: Response = await call_next(request)
+
+    if request.method == "GET":
+        response.headers.setdefault("Cache-Control", "no-store")
+
+    return response
 
 # collect system stats continously
 systemstat_collector = systeminfo.SystemStatHistory()
 
-# TODO: do we want to limit this explicitly?
-# hostname = socket.gethostname()
-# ip = socket.gethostbyname(hostname)
-# origins = [
-#     f"http://{hostname}:8080",
-#     f"http://{ip}:8080",
-#     "http://192.168.1.167:8080", # TODO: remove, this is a hack while the site is not delivered by fastapi or a webserver
-#     "http://192.168.1.50:8080", # TODO: remove, this is a hack while the site is not delivered by fastapi or a webserver
-#     "http://192.168.1.51:8080", # TODO: remove, this is a hack while the site is not delivered by fastapi or a webserver
-#     "http://localhost",
-#     "http://localhost:8080",
-# ]
 
-# print(origins)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "*",
-    ],  # origins,  # TODO: see if origin limitations set above are needed
-    allow_credentials=False,  # we don't need no cookies
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# TODO: check if we need this with an nginx proxy
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[
+#         "*",
+#     ],  # origins,  # TODO: see if origin limitations set above are needed
+#     allow_credentials=False,  # we don't need no cookies
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
@@ -87,7 +87,7 @@ loop_control = {"stop_loops": False}
 condition = Condition()
 queue_lock = Lock()
 
-active_clients = []
+active_clients: list[SSE_StreamingResponse] = []
 
 
 async def send_messages2clients(data: None|str) -> None:
@@ -120,7 +120,7 @@ async def process_signals() -> None: ...
 
 
 @app.get("/run/messages", response_class=SSE_StreamingResponse)
-async def stream_messages():
+async def stream_messages() -> SSE_StreamingResponse:
     global active_clients
     return SSE_StreamingResponse(active_clients, media_type="text/event-stream")
 
@@ -144,9 +144,10 @@ app.include_router(audio.router)
 app.include_router(channelpedia.router)
 
 
+# TODO: why is this needed again?
 # catch all redirect
 @app.route("/static/{}")
-async def default_redirect(*args, **kwargs):
+async def default_redirect(*args, **kwargs) -> RedirectResponse:
     url = app.url_path_for("static")
     response = RedirectResponse(url=url)
     return response

@@ -81,8 +81,11 @@ def read_scope(
                 dt = r.get_end()
                 r.seek_realtime(dt)
             case _:
-                timestamp = datetime.datetime.fromisoformat(start.replace(' ', '+'))
-                r.seek_realtime(timestamp)
+                if uuid is not None:
+                    r.seek_cursor(uuid)
+                else:
+                    timestamp = datetime.datetime.fromisoformat(start.replace(' ', '+'))
+                    r.seek_realtime(timestamp)
 
         response = []
         for n, e in zip(range(n_entries), r):

@@ -1,28 +1,28 @@
 import asyncio
-import typing
+from typing import Any
 from fastapi.responses import StreamingResponse
 from fastapi import BackgroundTasks
 from starlette.types import Send, Scope, Receive
-from starlette.concurrency import run_until_first_complete
+from starlette.concurrency import run_until_first_complete # pyright: ignore[reportUnknownVariableType]
 
 
 class SSE_StreamingResponse(StreamingResponse):
     """
     This is a specialized StreamingResponse which can register itself on a list
     of active client connections and forward all messages added to it's messages queue.
-        
+
     """
     is_closed = False
 
     def __init__(
         self,
-        register: typing.List,
+        register: list["SSE_StreamingResponse"],
         status_code: int = 200,
-        headers: dict = None,
-        media_type: str = None,
-        background: BackgroundTasks = None,
+        headers: dict[str, Any]|None = None,
+        media_type: str|None = None,
+        background: BackgroundTasks|None = None,
     ) -> None:
-        self.messages = asyncio.Queue()
+        self.messages: asyncio.Queue[str|bytes|None] = asyncio.Queue()
         self.status_code = status_code
         self.media_type = self.media_type if media_type is None else media_type
         self.background = background
@@ -40,11 +40,11 @@ class SSE_StreamingResponse(StreamingResponse):
             }
         )
         while (chunk := await self.messages.get()) is not None:
-            if not isinstance(chunk, bytes):
-                chunk = chunk.encode(self.charset)
+            if isinstance(chunk, str):
+                chunk = chunk.encode(self.charset, "replace")
             print("sending data for", self)
             await send({"type": "http.response.body", "body": chunk, "more_body": True})
-        
+
         await send({"type": "http.response.body", "body": b"", "more_body": False})
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

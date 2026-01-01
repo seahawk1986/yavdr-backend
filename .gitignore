@@ -5,4 +5,5 @@ mitogen-*
 node_modules/
 .new-venv/
 .venv-3.12/*
-app/static/
+assets/static/
+old_system_backend/
