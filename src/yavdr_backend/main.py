@@ -38,7 +38,7 @@ async def lifespan_handler(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # NOTE: for production: think about locking down the docs:
 # app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app = FastAPI(lifespan=lifespan_handler, root_path='/api')
+app = FastAPI(lifespan=lifespan_handler)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

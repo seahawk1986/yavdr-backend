@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import asyncio
 import datetime
+import logging
 import os
 import platform
 import subprocess
-import sys
 from collections import defaultdict, deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from typing import Any
 
 import distro
@@ -169,7 +169,7 @@ def sensors_temperature() -> Temperatures:
                 )
             ]
     except (subprocess.CalledProcessError, IOError) as err:
-        print("could not get nvidia-temperature", err, file=sys.stderr)
+        logging.debug("could not get nvidia-temperature: %s", err)
         pass
     for sensor_module, data in psutil.sensors_temperatures().items():
         sensors_seen: set[str] = set()
