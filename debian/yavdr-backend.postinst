@@ -1,4 +1,4 @@
-#!/sh
+#!/bin/sh
 set -e
 
 SERVICE_USER="yavdr-backend"
