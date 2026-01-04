@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 import asyncio
-from collections.abc import Awaitable, Callable, Generator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 import logging
 from threading import Condition, Lock
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient, Timeout
-from starlette.staticfiles import StaticFiles
+# from starlette.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
 from yavdr_backend.routers import auth, system, lircd2uinput, vdr, log, audio, channelpedia
@@ -39,7 +38,7 @@ async def lifespan_handler(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # NOTE: for production: think about locking down the docs:
 # app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app = FastAPI(lifespan=lifespan_handler)
+app = FastAPI(lifespan=lifespan_handler, root_path='/api')
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -81,7 +80,7 @@ async def redirect_to_docs():
 
 
 # mount the static ressources
-app.mount("/static", StaticFiles(directory="assets/static", html=True), name="static")
+# app.mount("/static", StaticFiles(directory="assets/static", html=True), name="static")
 
 loop_control = {"stop_loops": False}
 condition = Condition()
@@ -146,8 +145,8 @@ app.include_router(channelpedia.router)
 
 # TODO: why is this needed again?
 # catch all redirect
-@app.route("/static/{}")
-async def default_redirect(*args, **kwargs) -> RedirectResponse:
-    url = app.url_path_for("static")
-    response = RedirectResponse(url=url)
-    return response
+# @app.route("/static/{}")
+# async def default_redirect(*args, **kwargs) -> RedirectResponse:
+#     url = app.url_path_for("static")
+#     response = RedirectResponse(url=url)
+#     return response

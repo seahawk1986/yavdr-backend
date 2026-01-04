@@ -18,7 +18,7 @@ from ruamel.yaml.comments import CommentedMap
 
 import ansible_runner
 import sdbus
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 import sdbus.exceptions
 from sdbus.utils.parse import parse_properties_changed
 
@@ -34,6 +34,8 @@ from yavdr_backend.interfaces.systemd_unit_interface import (
     OrgFreedesktopSystemd1UnitInterface,
 )
 
+from yavdr_backend.models.auth import Login
+from yavdr_backend.tools.pam import verify_user
 from yavdr_backend.models.xorg import XorgConfig
 
 YAVDR_BACKEND_INTERFACE = "de.yavdr.SystemBackend"
@@ -301,6 +303,11 @@ allowed_vdr_config_files_options: dict[AllowedVDRConfigfiles, FileOption] = {
     ),
 }
 
+def get_backend(system_bus: sdbus.SdBus):
+    return YavdrSystemBackend(system_bus).new_proxy(
+                YAVDR_BACKEND_INTERFACE, "/", system_bus
+            )
+
 
 class YavdrSystemBackend(
     sdbus.DbusInterfaceCommonAsync, interface_name=YAVDR_BACKEND_INTERFACE
@@ -322,6 +329,15 @@ class YavdrSystemBackend(
                 await job.run()
                 self.job_uuid = ""
                 self.job_queue.task_done()
+
+    @sdbus.dbus_method_async(input_signature="ss", result_signature="b", flags=sdbus.DbusUnprivilegedFlag)
+    async def check_login(self, username: str, password: str) -> bool:
+        try:
+            login = Login(username=username, password=SecretStr(password))
+            return verify_user(login.username, login.password.get_secret_value())
+        except Exception as err:
+            logging.warning(err)
+            return False
 
     @sdbus.dbus_property_async("s")
     def get_current_job(self):

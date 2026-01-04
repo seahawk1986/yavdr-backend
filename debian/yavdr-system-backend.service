@@ -1,0 +1,12 @@
+[Unit]
+Description=yaVDR System Backend
+
+[Service]
+Type=dbus
+BusName=de.yavdr.SystemBackend
+ExecStart=/usr/bin/yavdr-system-backend
+Restart=on-failure
+RestartPreventExitStatus=0 2
+
+[Install]
+WantedBy=multi-user.target

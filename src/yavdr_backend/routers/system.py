@@ -4,11 +4,11 @@ import json
 import logging
 from pathlib import Path
 import sys
-from typing import Any, Generator
+from typing import Any
 from fastapi.responses import FileResponse
 import sdbus
 from threading import Lock
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel

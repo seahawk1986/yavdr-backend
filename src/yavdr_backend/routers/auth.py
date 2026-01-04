@@ -1,8 +1,9 @@
+from contextlib import closing
 import grp
 import pwd
 from datetime import datetime, timedelta
+from typing import Any
 from pytz import UTC
-from typing import List
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,14 +13,17 @@ from fastapi.security import (
     SecurityScopes,
 )
 from jwt import PyJWTError
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, SecretStr, ValidationError
+import sdbus
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from yavdr_backend.interfaces.system_backend import YAVDR_BACKEND_INTERFACE, YavdrSystemBackend
+from yavdr_backend.models.auth import Login
 import yavdr_backend.tools.pam as pam
 
 router = APIRouter()
 
-# IDEA: generate a new token on earch startup
+# TODO: generate a new token on earch startup
 # SECRET_KEY = token_hex(32)
 SECRET_KEY = '5a031715ae22a2690ee9f2fa3acb1cc56c142062eef2b2b752c44330a4e50365'
 ALGORITHM = "HS256"
@@ -33,15 +37,13 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str = ''
-    scopes: List[str] = []
+    scopes: list[str] = []
 
 
 class User(BaseModel):
     username: str
-    scopes: List[str] = Field(default_factory=list)
+    scopes: list[str] = Field(default_factory=list)
 
-
-pam_authenticator = pam.pam()
 
 supported_scopes = {
     "adm": "grant full access",
@@ -55,7 +57,7 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-def get_user_groups(username: str) -> List[str]:
+def get_user_groups(username: str) -> list[str]:
     return [
         user_groups.gr_name for user_groups in grp.getgrall()
         if username in user_groups.gr_mem
@@ -74,7 +76,7 @@ def get_user(username: str):
 full_access_groups = set(["adm", "log", "remote"])
 
 
-def create_access_token(*, data: dict, expires_delta: timedelta|None = None):
+def create_access_token(*, data: dict[str, Any], expires_delta: timedelta|None = None):
     to_encode = data.copy()
     if not (scopes := to_encode.get('scopes')):
         scopes = supported_scopes
@@ -112,7 +114,7 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
+        if not username:
             raise CREDENTIALS_ERROR
         token_scopes = payload.get("scopes", [])
         token_data = TokenData(username=username, scopes=token_scopes)
@@ -161,12 +163,19 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
     Otherwise the requested scopes are returned if the user is a member in the respective groups.
     """
-    if not pam_authenticator.authenticate(form_data.username, form_data.password):
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    with closing(sdbus.sd_bus_open_system()) as system_bus:
+        login = Login(username=form_data.username, password=SecretStr(form_data.password))
+
+        backend_connection = YavdrSystemBackend(system_bus).new_proxy(
+                YAVDR_BACKEND_INTERFACE, "/", system_bus
+            )
+
+        if not await backend_connection.check_login(login.username, login.password.get_secret_value()):
+            raise HTTPException(
+                status_code=HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": form_data.username, "scopes": form_data.scopes},
