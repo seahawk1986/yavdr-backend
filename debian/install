@@ -1,2 +1,2 @@
-debian/yavdr-backend usr/bin/
+debian/run-yavdr-backend usr/bin/
 debian/de.yavdr.SystemBackend.conf usr/share/dbus-1/systemd.d/
