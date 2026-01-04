@@ -4,6 +4,5 @@ set -e
 exec /usr/bin/uvicorn yavdr_backend.main:app \
   --workers 1 \
   --uds /run/yavdr-backend/uvicorn.sock \
-  --root-path /api \
   --proxy-headers \
   --forwarded-allow-ips "127.0.0.1"

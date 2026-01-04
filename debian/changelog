@@ -1,3 +1,9 @@
+yavdr-backend (0.1.0~resolute) resolute; urgency=medium
+
+  * bug fixes and improvements 
+
+ -- Alexander Grothe <alexander@yavdr-resolute-nvidia>  Sun, 04 Jan 2026 23:16:47 +0100
+
 yavdr-backend (0.0.1~noble) noble; urgency=medium
 
   * Initial release.
