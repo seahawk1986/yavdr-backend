@@ -1,18 +1,20 @@
 import asyncio
-from dataclasses import dataclass
-from functools import wraps
-from contextlib import closing
 import inspect
 import json
 import logging
-from pathlib import Path
+import os
 import threading
-from enum import StrEnum
 from collections.abc import Callable
+from contextlib import closing
+from dataclasses import dataclass
+from enum import StrEnum
+from functools import wraps
+from pathlib import Path
 from typing import Any, Protocol
 from uuid import UUID
 import uuid
 
+import dotenv
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
@@ -41,7 +43,8 @@ from yavdr_backend.models.xorg import XorgConfig
 YAVDR_BACKEND_INTERFACE = "de.yavdr.SystemBackend"
 SYSTEMD_DBUS_INTERFACE = "org.freedesktop.systemd1"
 
-ANSIBLE_DIR = "/home/alexander/yavdr-ansible"
+dotenv.load_dotenv()
+ANSIBLE_DIR = os.environ.get("ANSIBLE_DIR", "/etc/ansible")
 JOB_LOCK = threading.Lock()
 
 ORDER_LOCK = threading.Lock()

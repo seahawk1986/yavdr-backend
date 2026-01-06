@@ -76,10 +76,21 @@ async def run_playbook(request: Request):
 async def get_xorg_config() -> XorgConfig:
     config_file = Path('/etc/yavdr/display_config.yml')
     yaml = YAML(typ="safe")
-    with open(config_file) as f:
-        data: dict[str, Any] = yaml.load(f) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+    try:
+        with open(config_file) as f:
+            data: dict[str, Any] = yaml.load(f) # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+    except IOError:
+        fallback_config_file = Path('/etc/ansible/facts.d/xorg_config.fact')
+        print(f"fallback to {fallback_config_file=}")
+        try:
+            with open(fallback_config_file) as f:
+                data = json.load(f).get('xorg_config', {})
+        except Exception:
+            logging.exception("could not load xorg_config, please rescan displays")
+            raise
+
     print(f"{data=}")
-    config: XorgConfig = XorgConfig(**data)
+    config: XorgConfig = XorgConfig.model_validate(data)
     return config
 
 @router.get('/system/xorg_facts')
