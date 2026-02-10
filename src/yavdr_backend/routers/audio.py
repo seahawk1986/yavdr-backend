@@ -79,7 +79,7 @@ async def list_pulseaudio_sinks() -> (
                 PulseSink(
                     device=s.name,
                     device_name=s.description,
-                    index=s.index,
+                    index=s.idx,
                     card=s.card,
                     muted=s.is_muted,
                     number_of_channels=s.channel_count,
@@ -89,7 +89,8 @@ async def list_pulseaudio_sinks() -> (
                 )
             )
         return PulseResponse(
-            pulse_devices=sorted(devices, key=lambda x: x.device), default_sink=default_sink
+            pulse_devices=sorted(devices, key=lambda x: x.device),
+            default_sink=default_sink,
         )
 
 

@@ -12,22 +12,34 @@ from fastapi.exceptions import RequestValidationError
 
 from fastapi.responses import JSONResponse
 from httpx import AsyncClient, Timeout
+
 # from starlette.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
-from yavdr_backend.routers import auth, system, lircd2uinput, vdr, log, audio, channelpedia
+from yavdr_backend.routers import (
+    auth,
+    system,
+    lircd2uinput,
+    vdr,
+    log,
+    audio,
+    channelpedia,
+)
 from yavdr_backend.tools import systeminfo
 from yavdr_backend.tools.sse import SSE_StreamingResponse
 
 load_dotenv()  # take environment variables from .env.
 timeout = Timeout(10.0, connect=5.0)
 
+
 @asynccontextmanager
 async def lifespan_handler(app: FastAPI) -> AsyncGenerator[None, None]:
     # see https://fastapi.tiangolo.com/advanced/events/#lifespan
     print("callback on startup")
     # Initialize a shared HTTP/2 client for the application
-    app.state.http_client = AsyncClient(http2=True, timeout=timeout) # TODO: check if this requires a more advanced proxy setting in nginx
+    app.state.http_client = AsyncClient(
+        http2=True, timeout=timeout
+    )  # TODO: check if this requires a more advanced proxy setting in nginx
     t = asyncio.create_task(systemstat_collector.run_update())
     yield
     print("shutdown of the fastapi app")
@@ -35,28 +47,33 @@ async def lifespan_handler(app: FastAPI) -> AsyncGenerator[None, None]:
     await app.state.http_client.aclose()
 
 
-
 # NOTE: for production: think about locking down the docs:
 # app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
-app = FastAPI(lifespan=lifespan_handler)
+app = FastAPI(root_path="/api", lifespan=lifespan_handler)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-	exc_str = f'{exc}'.replace('\n', ' ').replace('   ', ' ')
-	logging.error(f"{request}: {exc_str}")
-	content: dict[str, Any] = {'status_code': 10422, 'message': exc_str, 'data': None}
-	return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+    logging.error(f"{request}: {exc_str}")
+    content: dict[str, Any] = {"status_code": 10422, "message": exc_str, "data": None}
+    return JSONResponse(
+        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+    )
 
 
 # tell the client not to cache repeated GET requests by default
 @app.middleware("http")
-async def disable_cache(request: Request, call_next: Callable[..., Awaitable[Response]]) -> Response:
+async def disable_cache(
+    request: Request, call_next: Callable[..., Awaitable[Response]]
+) -> Response:
     response: Response = await call_next(request)
 
     if request.method == "GET":
         response.headers.setdefault("Cache-Control", "no-store")
 
     return response
+
 
 # collect system stats continously
 systemstat_collector = systeminfo.SystemStatHistory()
@@ -72,6 +89,7 @@ systemstat_collector = systeminfo.SystemStatHistory()
 #     allow_methods=["*"],
 #     allow_headers=["*"],
 # )
+
 
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
@@ -89,7 +107,7 @@ queue_lock = Lock()
 active_clients: list[SSE_StreamingResponse] = []
 
 
-async def send_messages2clients(data: None|str) -> None:
+async def send_messages2clients(data: None | str) -> None:
     if data is None:
         pass
     for client in active_clients[:]:
