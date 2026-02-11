@@ -31,8 +31,9 @@ class Message(BaseModel):
     msg: str
 
 
-class Sink(BaseModel):
-    sink: str
+class SinkData(BaseModel):
+    default_sink: str
+    card_name: str
 
 
 class PortActiveEnum(str, Enum):
@@ -46,6 +47,7 @@ class PulseSink(BaseModel):
     device_name: str
     index: int
     card: int
+    card_name: str
     muted: bool
     number_of_channels: int
     volume_values: list[float]  # array of doubles
@@ -81,6 +83,7 @@ async def list_pulseaudio_sinks() -> (
                     device_name=s.description,
                     index=s.idx,
                     card=s.card,
+                    card_name=s.card_name,
                     muted=s.is_muted,
                     number_of_channels=s.channel_count,
                     volume_values=s.volume_values,
@@ -109,24 +112,32 @@ async def list_pulseaudio_sinks() -> (
     },
 )
 async def set_default_pulseaudio_sink(
-    *, default_sink: Sink, current_user: User = Depends(get_current_active_user)
-):
+    data: SinkData,
+    current_user: User = Depends(get_current_active_user),
+) -> JSONResponse:
+
+    default_sink = data.default_sink
+    card_name = data.card_name
+
     with closing(sdbus.sd_bus_open_system()) as bus:
         pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
             "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
         )
-        sink = default_sink.sink
+
+        print(f"set_default_pulseaudio_sink: sink_name={default_sink}, {card_name=}")
 
         try:
-            if await pulsectl.set_default_sink(sink_name=sink):
+            if await pulsectl.set_default_sink(
+                sink_name=default_sink, card_name=card_name
+            ):
                 return JSONResponse(
                     status_code=HTTP_200_OK,
-                    content={"msg": f"set {sink} as default sink"},
+                    content={"msg": f"set {default_sink} as default sink"},
                 )
             else:
                 return JSONResponse(
                     status_code=HTTP_400_BAD_REQUEST,
-                    content={"msg": f"invalid device {sink}"},
+                    content={"msg": f"invalid device {default_sink}"},
                 )
         except Exception as e:
             print(e, file=sys.stderr)
@@ -185,6 +196,7 @@ class AudioProfileData(BaseModel):
 async def set_card_profile(
     data: AudioProfileData, current_user: User = Depends(get_current_active_user)
 ) -> bool:
+    print(f"set output profile: {data}")
     with closing(sdbus.sd_bus_open_system()) as bus:
         pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
             "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
