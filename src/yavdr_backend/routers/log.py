@@ -13,6 +13,7 @@ router = APIRouter()
 
 hostname = socket.gethostname()
 
+
 class ReverseReader(journal.Reader):
     def __next__(self):
         ans = self.get_previous()
@@ -20,16 +21,19 @@ class ReverseReader(journal.Reader):
             return ans
         raise StopIteration()
 
+
 class LogRequestOptions(BaseModel):
-    timestamp: datetime.datetime|None = None
-    timedelta_s: int| None = None
-    message_uuid: str|None = None
-    n_entries: int| None = None
-    identifier: str|None = None
+    timestamp: datetime.datetime | None = None
+    timedelta_s: int | None = None
+    message_uuid: str | None = None
+    n_entries: int | None = None
+    identifier: str | None = None
     forward: bool = True
 
+
 def create_alias(name: str) -> str:
-    return name.lstrip('_')
+    return name.lstrip("_")
+
 
 class LogEntry(BaseModel):
     model_config = ConfigDict(
@@ -38,35 +42,39 @@ class LogEntry(BaseModel):
     )
     # SOURCE_MONOTONIC_TIMESTAMP: datetime.timedelta|None = None
     TRANSPORT: str
-    SYSLOG_FACILITY: int|None = None
-    SYSLOG_IDENTIFIER: str|None = None
-    SYSLOG_TIMESTAMP: str|None = None
+    SYSLOG_FACILITY: int | None = None
+    SYSLOG_IDENTIFIER: str | None = None
+    SYSLOG_TIMESTAMP: str | None = None
     # BOOT_ID: UUID
     # MACHINE_ID: UUID
     HOSTNAME: str
     # RUNTIME_SCOPE: str
-    PRIORITY: int
+    PRIORITY: int = 50
     MESSAGE: str
-    REALTIME_TIMESTAMP: datetime.datetime|None = None
+    REALTIME_TIMESTAMP: datetime.datetime | None = None
     # MONOTONIC_TIMESTAMP: datetime.timedelta|None = None
-    CURSOR: str|None = None
+    CURSOR: str | None = None
 
 
 class Direction(enum.StrEnum):
     forward = "forward"
     backward = "backward"
 
+
 class PredefinedStart(enum.StrEnum):
-    boot = 'boot'
-    now = 'now'
+    boot = "boot"
+    now = "now"
+
 
 @router.get("/logs/")
 def read_scope(
-    start: PredefinedStart|str,
+    start: PredefinedStart | str,
     direction: Direction,
     n_entries: int,
-    uuid: str|None = None,
-    current_user: User = Security(get_current_active_user, scopes=["log"])  # NOTE: this is the way to implement scope-based access
+    uuid: str | None = None,
+    current_user: User = Security(
+        get_current_active_user, scopes=["log"]
+    ),  # NOTE: this is the way to implement scope-based access
 ) -> list[LogEntry]:
     match direction:
         case Direction.forward:
@@ -75,50 +83,59 @@ def read_scope(
             reader = ReverseReader
     with reader() as r:
         match start:
-            case 'boot':
+            case "boot":
                 r.this_boot()
-            case 'now':
+            case "now":
                 dt = r.get_end()
                 r.seek_realtime(dt)
             case _:
                 if uuid is not None:
                     r.seek_cursor(uuid)
                 else:
-                    timestamp = datetime.datetime.fromisoformat(start.replace(' ', '+'))
+                    timestamp = datetime.datetime.fromisoformat(start.replace(" ", "+"))
                     r.seek_realtime(timestamp)
 
         response = []
         for n, e in zip(range(n_entries), r):
             # avoid to repeat an entry
-            if uuid and e.get('__CURSOR') == uuid:
+            if uuid and e.get("__CURSOR") == uuid:
                 continue
-            response.append({k.lstrip('_'): v for k, v in e.items()})
+            response.append({k.lstrip("_"): v for k, v in e.items()})
         if direction == Direction.backward:
             response.reverse()
         return response
 
-@router.get('/logs/time_limits')
+
+@router.get("/logs/time_limits")
 def time_limits() -> tuple[datetime.datetime, datetime.datetime]:
     r = journal.Reader()
     return r.get_start(), r.get_end()
 
 
-
-@router.get('/logs/download')
-def download_log(start: str, end: str|None = None, *, current_user: User = Security(get_current_active_user, scopes=["log"])) -> StreamingResponse:
+@router.get("/logs/download")
+def download_log(
+    start: str,
+    end: str | None = None,
+    *,
+    current_user: User = Security(get_current_active_user, scopes=["log"]),
+) -> StreamingResponse:
     headers = {
-        'Content-Disposition': "attachment; filename*=utf-8''{}".format(f"{start}_{hostname}_log.txt")
+        "Content-Disposition": "attachment; filename*=utf-8''{}".format(
+            f"{start}_{hostname}_log.txt"
+        )
     }
+
     def iterlog():
         nonlocal start
         r = journal.Reader()
         match start:
-            case 'boot':
+            case "boot":
                 r.this_boot()
             case _:
-                timestamp = datetime.datetime.fromisoformat(start.replace(' ', '+'))
+                timestamp = datetime.datetime.fromisoformat(start.replace(" ", "+"))
                 r.seek_realtime(timestamp)
         for e in r:
-            timestamp = e['__REALTIME_TIMESTAMP']
-            yield f"{timestamp.strftime("%b %d %H:%M:%S")} {e['_HOSTNAME']}: {e['MESSAGE']}\n"
+            timestamp = e["__REALTIME_TIMESTAMP"]
+            yield f"{timestamp.strftime('%b %d %H:%M:%S')} {e['_HOSTNAME']}: {e['MESSAGE']}\n"
+
     return StreamingResponse(iterlog(), headers=headers, media_type="text/plain")
