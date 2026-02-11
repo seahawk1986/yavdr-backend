@@ -25,8 +25,12 @@ import sdbus.exceptions
 from sdbus.utils.parse import parse_properties_changed
 
 
-from yavdr_backend.interfaces.systemd_dbus_interface import OrgFreedesktopSystemd1ManagerInterface
-from yavdr_backend.interfaces.systemd_unit_interface import OrgFreedesktopSystemd1UnitInterface
+from yavdr_backend.interfaces.systemd_dbus_interface import (
+    OrgFreedesktopSystemd1ManagerInterface,
+)
+from yavdr_backend.interfaces.systemd_unit_interface import (
+    OrgFreedesktopSystemd1UnitInterface,
+)
 
 
 from yavdr_backend.interfaces.systemd_dbus_interface import (
@@ -48,6 +52,13 @@ ANSIBLE_DIR = os.environ.get("ANSIBLE_DIR", "/etc/ansible")
 JOB_LOCK = threading.Lock()
 
 ORDER_LOCK = threading.Lock()
+
+
+class UpdateTypeEnum(StrEnum):
+    ALL = "all"
+    DEBIAN = "debian"
+    SNAP = "snap"
+    FLATPAK = "flatpak"
 
 
 def with_stopped_systemd_units(units: list[str]):
@@ -241,10 +252,12 @@ class AnsibleJob:
         )
 
     async def run(self):
-        logging.info(f"adding AnsibleJob with {self.uuid=}: {self.playbook=} - {self.extravars=}")
+        logging.info(
+            f"adding AnsibleJob with {self.uuid=}: {self.playbook=} - {self.extravars=}"
+        )
         try:
             _thread = await asyncio.to_thread(
-                ansible_runner.run, # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+                ansible_runner.run,  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
                 private_data_dir=ANSIBLE_DIR,
                 playbook=self.playbook,
                 status_handler=self._status_handler,
@@ -306,10 +319,11 @@ allowed_vdr_config_files_options: dict[AllowedVDRConfigfiles, FileOption] = {
     ),
 }
 
+
 def get_backend(system_bus: sdbus.SdBus):
     return YavdrSystemBackend(system_bus).new_proxy(
-                YAVDR_BACKEND_INTERFACE, "/", system_bus
-            )
+        YAVDR_BACKEND_INTERFACE, "/", system_bus
+    )
 
 
 class YavdrSystemBackend(
@@ -333,7 +347,9 @@ class YavdrSystemBackend(
                 self.job_uuid = ""
                 self.job_queue.task_done()
 
-    @sdbus.dbus_method_async(input_signature="ss", result_signature="b", flags=sdbus.DbusUnprivilegedFlag)
+    @sdbus.dbus_method_async(
+        input_signature="ss", result_signature="b", flags=sdbus.DbusUnprivilegedFlag
+    )
     async def check_login(self, username: str, password: str) -> bool:
         try:
             login = Login(username=username, password=SecretStr(password))
@@ -351,10 +367,12 @@ class YavdrSystemBackend(
         return self.current_runner
 
     @sdbus.dbus_method_async(
-            input_signature="s", result_signature="s", flags=sdbus.DbusUnprivilegedFlag
+        input_signature="s", result_signature="s", flags=sdbus.DbusUnprivilegedFlag
     )
     async def install_yavdr_full(self, playbook_variables: str) -> str:
-        config: dict[str, Any] = json.loads(playbook_variables) if playbook_variables else {}
+        config: dict[str, Any] = (
+            json.loads(playbook_variables) if playbook_variables else {}
+        )
         job_uuid = uuid.uuid1()
         self.job_uuid = f"{job_uuid}"
         self.job_queue.put_nowait(
@@ -367,7 +385,6 @@ class YavdrSystemBackend(
             )
         )
         return str(job_uuid)
-
 
     @sdbus.dbus_method_async(
         input_signature="", result_signature="s", flags=sdbus.DbusUnprivilegedFlag
@@ -388,20 +405,20 @@ class YavdrSystemBackend(
         )
         return str(job_uuid)
 
-    @sdbus.dbus_method_async(
-        input_signature="s", flags=sdbus.DbusUnprivilegedFlag
-    )
+    @sdbus.dbus_method_async(input_signature="s", flags=sdbus.DbusUnprivilegedFlag)
     async def write_display_configuration(self, config: str) -> None:
         logging.debug(f"called {__name__} with {config=}")
         try:
             validated_config = XorgConfig(**json.loads(config))
             yaml = YAML()
             yaml.default_flow_style = False
-            yaml.indent(mapping=2, sequence=4, offset=2) # pyright: ignore[reportUnknownMemberType]
+            yaml.indent(mapping=2, sequence=4, offset=2)  # pyright: ignore[reportUnknownMemberType]
             content = CommentedMap(validated_config.model_dump(mode="json"))
-            content.yaml_set_start_comment("run 'sudo yavdr-config run-display-config' to apply changes of this file to the system") # pyright: ignore[reportUnknownMemberType]
-            with open(Path('/etc/yavdr/display_config.yml'), 'w') as f:
-                yaml.dump(data=content, stream=f) # pyright: ignore[reportUnknownMemberType]
+            content.yaml_set_start_comment(
+                "run 'sudo yavdr-config run-display-config' to apply changes of this file to the system"
+            )  # pyright: ignore[reportUnknownMemberType]
+            with open(Path("/etc/yavdr/display_config.yml"), "w") as f:
+                yaml.dump(data=content, stream=f)  # pyright: ignore[reportUnknownMemberType]
 
         except Exception:
             logging.exception("failed to save diplay config")
@@ -485,6 +502,109 @@ class YavdrSystemBackend(
                     print("Error when queuing FileJob:", err)
 
             return str(job_uuid)
+
+    @sdbus.dbus_method_async(
+        input_signature="s", result_signature="bs", flags=sdbus.DbusUnprivilegedFlag
+    )
+    async def update(self, update_type: UpdateTypeEnum) -> tuple[bool, str]:
+        print(f"called update with {update_type=}")
+
+        async def system_update():
+            p = await asyncio.create_subprocess_exec(
+                "apt",
+                "update",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await p.communicate()
+            if p.returncode != 0:
+                raise ValueError(stderr)
+            u = await asyncio.create_subprocess_exec(
+                "apt-get",
+                "dist-upgrade",
+                "-y",
+                "-o",
+                'Dpkg::Options::="--force-confdef"',
+                "-o",
+                'Dpkg::Options::="--force-confold"',
+                env={"DEBIAN_FRONTEND": "noninteractive"},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await u.communicate()
+            if u.returncode != 0:
+                print(stderr)
+                raise ValueError(stderr)
+            print(_stdout, stderr)
+
+        async def snap_update():
+            p = await asyncio.create_subprocess_exec(
+                "snap",
+                "refresh",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await p.communicate()
+            if p.returncode != 0:
+                raise ValueError(stderr)
+            print(_stdout)
+
+        async def flatpak_update():
+            p = await asyncio.create_subprocess_exec(
+                "flatpak",
+                "update",
+                "--noninteractive",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await p.communicate()
+            if p.returncode != 0:
+                raise ValueError(stderr)
+            print(_stdout)
+
+            p = await asyncio.create_subprocess_exec(
+                "flatpak",
+                "uninstall",
+                "--unused",
+                "--noninteractive",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await p.communicate()
+            if p.returncode != 0:
+                raise ValueError(stderr)
+            print(_stdout)
+            p = await asyncio.create_subprocess_shell(
+                """\
+test -f /proc/driver/nvidia/version || exit 0
+installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version)
+version_part=$(sed 's/\./-/g' <<< "$installed_version")
+grep -q "^nvidia-${version_part}" < <(flatpak list) && exit 0 || exit 1""",
+                executable="/usr/bin/bash",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await p.communicate()
+            if p.returncode != 0:
+                raise ValueError(stderr)
+            print(_stdout)
+
+        try:
+            match update_type:
+                case UpdateTypeEnum.ALL:
+                    await system_update()
+                    await snap_update()
+                    await flatpak_update()
+                case UpdateTypeEnum.DEBIAN:
+                    await system_update()
+                case UpdateTypeEnum.SNAP:
+                    await snap_update()
+                case UpdateTypeEnum.FLATPAK:
+                    await flatpak_update()
+        except Exception as err:
+            return False, str(err)
+        else:
+            return True, "success"
 
 
 # async def main():

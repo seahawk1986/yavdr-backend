@@ -19,6 +19,7 @@ from yavdr_backend.interfaces.system_backend import (
     YavdrSystemBackend,
     Status,
     YAVDR_BACKEND_INTERFACE,
+    UpdateTypeEnum,
 )
 from yavdr_backend.models.xorg import XorgConfig
 # from interfaces.system_backend import YAVDR_BACKEND_INTERFACE
@@ -164,3 +165,13 @@ async def set_xorg_confg(config: XorgConfig, request: Request) -> EventSourceRes
                         # yield f"{e}: {message}"
 
     return EventSourceResponse(event_generator(), send_timeout=5)
+
+
+@router.post("/system/update/{update_type}")
+async def update_packages(update_type: UpdateTypeEnum) -> tuple[bool, str]:
+    with closing(sdbus.sd_bus_open_system()) as system_bus:
+        backend_connection = YavdrSystemBackend(system_bus).new_proxy(
+            YAVDR_BACKEND_INTERFACE, "/", system_bus
+        )
+        success, message = await backend_connection.update(update_type)
+        return success, message
