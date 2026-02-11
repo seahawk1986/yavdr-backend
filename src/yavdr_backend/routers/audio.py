@@ -52,7 +52,7 @@ class PulseSink(BaseModel):
     number_of_channels: int
     volume_values: list[float]  # array of doubles
     port_active: PortActiveEnum  # string one of ["yes", "no", "unknown"]
-    is_default_sink: bool
+    is_default_sink: bool = False
 
 
 class PulseResponse(BaseModel):
