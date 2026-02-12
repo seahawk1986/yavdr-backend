@@ -509,102 +509,104 @@ class YavdrSystemBackend(
     async def update(self, update_type: UpdateTypeEnum) -> tuple[bool, str]:
         print(f"called update with {update_type=}")
 
-        async def system_update():
-            p = await asyncio.create_subprocess_exec(
-                "apt",
-                "update",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await p.communicate()
-            if p.returncode != 0:
-                raise ValueError(stderr)
-            u = await asyncio.create_subprocess_exec(
-                "apt-get",
-                "dist-upgrade",
-                "-y",
-                "-o",
-                'Dpkg::Options::="--force-confdef"',
-                "-o",
-                'Dpkg::Options::="--force-confold"',
-                env={"DEBIAN_FRONTEND": "noninteractive"},
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await u.communicate()
-            if u.returncode != 0:
-                print(stderr)
-                raise ValueError(stderr)
-            print(_stdout, stderr)
+        with JOB_LOCK:
 
-        async def snap_update():
-            p = await asyncio.create_subprocess_exec(
-                "snap",
-                "refresh",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await p.communicate()
-            if p.returncode != 0:
-                raise ValueError(stderr)
-            print(_stdout)
+            async def system_update():
+                p = await asyncio.create_subprocess_exec(
+                    "apt",
+                    "update",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await p.communicate()
+                if p.returncode != 0:
+                    raise ValueError(stderr)
+                u = await asyncio.create_subprocess_exec(
+                    "apt-get",
+                    "dist-upgrade",
+                    "-y",
+                    "-o",
+                    'Dpkg::Options::="--force-confdef"',
+                    "-o",
+                    'Dpkg::Options::="--force-confold"',
+                    env={"DEBIAN_FRONTEND": "noninteractive"},
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await u.communicate()
+                if u.returncode != 0:
+                    print(stderr)
+                    raise ValueError(stderr)
+                print(_stdout, stderr)
 
-        async def flatpak_update():
-            p = await asyncio.create_subprocess_exec(
-                "flatpak",
-                "update",
-                "--noninteractive",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await p.communicate()
-            if p.returncode != 0:
-                raise ValueError(stderr)
-            print(_stdout)
+            async def snap_update():
+                p = await asyncio.create_subprocess_exec(
+                    "snap",
+                    "refresh",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await p.communicate()
+                if p.returncode != 0:
+                    raise ValueError(stderr)
+                print(_stdout)
 
-            p = await asyncio.create_subprocess_exec(
-                "flatpak",
-                "uninstall",
-                "--unused",
-                "--noninteractive",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await p.communicate()
-            if p.returncode != 0:
-                raise ValueError(stderr)
-            print(_stdout)
-            p = await asyncio.create_subprocess_shell(
-                """\
-test -f /proc/driver/nvidia/version || exit 0
-installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version)
-version_part=$(sed 's/\./-/g' <<< "$installed_version")
-grep -q "^nvidia-${version_part}" < <(flatpak list) && exit 0 || exit 1""",
-                executable="/usr/bin/bash",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            _stdout, stderr = await p.communicate()
-            if p.returncode != 0:
-                raise ValueError(stderr)
-            print(_stdout)
+            async def flatpak_update():
+                p = await asyncio.create_subprocess_exec(
+                    "flatpak",
+                    "update",
+                    "--noninteractive",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await p.communicate()
+                if p.returncode != 0:
+                    raise ValueError(stderr)
+                print(_stdout)
 
-        try:
-            match update_type:
-                case UpdateTypeEnum.ALL:
-                    await system_update()
-                    await snap_update()
-                    await flatpak_update()
-                case UpdateTypeEnum.DEBIAN:
-                    await system_update()
-                case UpdateTypeEnum.SNAP:
-                    await snap_update()
-                case UpdateTypeEnum.FLATPAK:
-                    await flatpak_update()
-        except Exception as err:
-            return False, str(err)
-        else:
-            return True, "success"
+                p = await asyncio.create_subprocess_exec(
+                    "flatpak",
+                    "uninstall",
+                    "--unused",
+                    "--noninteractive",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await p.communicate()
+                if p.returncode != 0:
+                    raise ValueError(stderr)
+                print(_stdout)
+                p = await asyncio.create_subprocess_shell(
+                    """\
+    test -f /proc/driver/nvidia/version || exit 0
+    installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version)
+    version_part=$(sed 's/\./-/g' <<< "$installed_version")
+    grep -q "^nvidia-${version_part}" < <(flatpak list) && exit 0 || exit 1""",
+                    executable="/usr/bin/bash",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _stdout, stderr = await p.communicate()
+                if p.returncode != 0:
+                    raise ValueError(stderr)
+                print(_stdout)
+
+            try:
+                match update_type:
+                    case UpdateTypeEnum.ALL:
+                        await system_update()
+                        await snap_update()
+                        await flatpak_update()
+                    case UpdateTypeEnum.DEBIAN:
+                        await system_update()
+                    case UpdateTypeEnum.SNAP:
+                        await snap_update()
+                    case UpdateTypeEnum.FLATPAK:
+                        await flatpak_update()
+            except Exception as err:
+                return False, str(err)
+            else:
+                return True, "success"
 
 
 # async def main():
