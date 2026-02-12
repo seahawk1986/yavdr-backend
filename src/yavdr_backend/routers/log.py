@@ -1,7 +1,7 @@
 import datetime
 import enum
 import socket
-from fastapi import APIRouter, Security
+from fastapi import APIRouter, Depends, Security
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
@@ -107,7 +107,9 @@ def read_scope(
 
 
 @router.get("/logs/time_limits")
-def time_limits() -> tuple[datetime.datetime, datetime.datetime]:
+def time_limits(
+    current_user: User = Depends(get_current_active_user),
+) -> tuple[datetime.datetime, datetime.datetime]:
     r = journal.Reader()
     return r.get_start(), r.get_end()
 

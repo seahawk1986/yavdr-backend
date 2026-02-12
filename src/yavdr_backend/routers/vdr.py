@@ -136,7 +136,9 @@ class Recording(BaseModel):
 
 
 @router.get("/vdr/recordings", response_model=list[Recording])
-async def get_vdr_recordings(current_user: User = Depends(get_current_active_user)) -> list[Recording]:
+async def get_vdr_recordings(
+    current_user: User = Depends(get_current_active_user),
+) -> list[Recording]:
     with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
         vdr_recordings = DeTvdrVdrRecordingInterface.new_proxy(
             "de.tvdr.vdr",
@@ -150,7 +152,7 @@ async def get_vdr_recordings(current_user: User = Depends(get_current_active_use
                 for k, v in r:
                     k = k.replace("/", "")
                     # print(k, v, type(v))
-                    if isinstance(v, tuple): # pyright: ignore[reportUnnecessaryIsInstance]
+                    if isinstance(v, tuple):  # pyright: ignore[reportUnnecessaryIsInstance]
                         new_rec[k] = v[-1]
                     else:
                         new_rec[k] = v
@@ -180,7 +182,9 @@ class RecNum(BaseModel):
     RecNum: int
 
 
-async def getSVDRP_Recording_ID_by_name(title: str):
+async def getSVDRP_Recording_ID_by_name(
+    title: str, current_user: User = Depends(get_current_active_user)
+):
     # TODO: we need a better way to match the recordings
     #       than just comparing the "Title" sent by dbus2vdr
     async for line in async_send_svdrpcommand("lstr"):
@@ -226,7 +230,9 @@ async def play_recording(
 
         rec_num = data.RecNum
         if rec_num >= 0:
-            success = await vdr_recordings.play(("i", rec_num), ("i", data.continue_replay))
+            success = await vdr_recordings.play(
+                ("i", rec_num), ("i", data.continue_replay)
+            )
             print("got response for playing rec by num:", success)
         else:
             success = False
@@ -236,7 +242,9 @@ async def play_recording(
                 status_code=HTTP_400_BAD_REQUEST,
                 content={"msg": "only positive numbers are allowed"},
             )
-        return JSONResponse(status_code=HTTP_200_OK, content={"msg": f"playing recording {data.RecNum}"})
+        return JSONResponse(
+            status_code=HTTP_200_OK, content={"msg": f"playing recording {data.RecNum}"}
+        )
 
 
 class Plugin(BaseModel):
@@ -264,7 +272,7 @@ async def get_vdr_start_arguments(
 
 @router.put("/vdr/start_arguments")
 async def write_args_config(
-    config: PluginConfig, _User: User=Depends(get_current_active_user)
+    config: PluginConfig, _User: User = Depends(get_current_active_user)
 ):
     await write_argument_file(config)
     return True
@@ -530,7 +538,9 @@ async def get_vdr_channels(
 
 
 @router.post("/vdr/channels")
-def save_vdr_channels(channel_list: list[str]):
+def save_vdr_channels(
+    channel_list: list[str], current_user: User = Depends(get_current_active_user)
+):
     print(channel_list)
     channels_conf = Path(
         "/tmp/channels.conf"
@@ -538,7 +548,7 @@ def save_vdr_channels(channel_list: list[str]):
     config_dir = Path(
         os.environ.get(
             "VDR_CONFIG_DIR",
-            pkgconfig.variables("vdr").get("configdir", "/var/lib/vdr"), # pyright: ignore[reportUnknownMemberType]
+            pkgconfig.variables("vdr").get("configdir", "/var/lib/vdr"),  # pyright: ignore[reportUnknownMemberType]
         )
     )
     print(f"{config_dir=}")
@@ -559,7 +569,9 @@ def upload_vdr_channels(
 
 
 @router.post("/vdr/channelfile")
-async def upload_channels_conf(file: UploadFile) -> bool:
+async def upload_channels_conf(
+    file: UploadFile, current_user: User = Depends(get_current_active_user)
+) -> bool:
     tmp = Path("/var/cache/yavdr-webfrontend/channel_lists/")
     tmp.mkdir(parents=True, exist_ok=True)
     print(f"{file.filename} {file.size}")
@@ -683,13 +695,17 @@ async def get_vdr_channels_with_groups(
 
 
 @router.delete("/vdr/channels/{channel_id}")
-async def delete_channel(channel_id: str, _User: User=Depends(get_current_active_user)):
+async def delete_channel(
+    channel_id: str, _User: User = Depends(get_current_active_user)
+):
     async for line in async_send_svdrpcommand(f"DELC {channel_id}"):
         print(line)
 
 
 @router.get("/vdr/plugin_config", response_model=list[vdr_plugin_config.PluginConfig])
-async def get_plugin_config(current_user: User = Depends(get_current_active_user)) -> list[PluginConfig]:
+async def get_plugin_config(
+    current_user: User = Depends(get_current_active_user),
+) -> list[PluginConfig]:
     return list(vdr_plugin_config.read_plugins().values())
 
 
@@ -766,7 +782,9 @@ class AudioChannel(BaseModel):
 
 
 @router.get("/vdr/audiochannel")
-async def get_audiochannels() -> list[AudioChannel]:
+async def get_audiochannels(
+    current_user: User = Depends(get_current_active_user),
+) -> list[AudioChannel]:
     audio_options: list[AudioChannel] = []
     async for line in async_send_svdrpcommand("AUDI"):
         line = line[4:]
@@ -782,7 +800,9 @@ async def get_audiochannels() -> list[AudioChannel]:
 
 
 @router.post("/vdr/audiochannel")
-async def set_audiochannel(channel_nr: int) -> tuple[bool, AudioChannel|str]:
+async def set_audiochannel(
+    channel_nr: int, current_user: User = Depends(get_current_active_user)
+) -> tuple[bool, AudioChannel | str]:
     async for line in async_send_svdrpcommand(f"AUDI {channel_nr}"):
         line = line.strip()[4:]
         if line.startswith(f"{channel_nr} "):
@@ -820,7 +840,9 @@ class EventEntryFields(StrEnum):
 
 
 @router.get("/vdr/epg")
-async def get_channel_epg(channel_id: str) -> list[EpgEntry]:
+async def get_channel_epg(
+    channel_id: str, current_user: User = Depends(get_current_active_user)
+) -> list[EpgEntry]:
     epg_entries: list[EpgEntry] = []
     entry: None | EpgEntry = None
     try:
@@ -883,7 +905,9 @@ VDRSetupEntry = StringEntry | ThreeIntEntry | Int64Entry
 
 
 @router.get("/vdr/setup")
-async def get_setup(key: str | None = None) -> list[VDRSetupEntry] | Any:
+async def get_setup(
+    key: str | None = None, current_user: User = Depends(get_current_active_user)
+) -> list[VDRSetupEntry] | Any:
     with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
         setup_proxy = DeTvdrVdrSetupInterface.new_proxy("de.tvdr.vdr", "/Setup", bus)
         if key is None:
@@ -895,7 +919,10 @@ async def get_setup(key: str | None = None) -> list[VDRSetupEntry] | Any:
                     case "(iii)":
                         value, min_value, max_value = values[1]
                         e = ThreeIntEntry(
-                            name=name, value=value, min_value=min_value, max_value=max_value
+                            name=name,
+                            value=value,
+                            min_value=min_value,
+                            max_value=max_value,
                         )
                         revised_data.append(e)
                     case "(si)":
@@ -915,7 +942,9 @@ async def get_setup(key: str | None = None) -> list[VDRSetupEntry] | Any:
 
 
 @router.post("/vdr/setup")
-async def set_setup(key: str, value: int | str):
+async def set_setup(
+    key: str, value: int | str, current_user: User = Depends(get_current_active_user)
+):
     with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
         setup_proxy = DeTvdrVdrSetupInterface.new_proxy("de.tvdr.vdr", "/Setup", bus)
         setup_data = await setup_proxy.list()
@@ -938,7 +967,7 @@ class VDRSkin(BaseModel):
 
 
 @router.get("/vdr/skins")
-async def get_skins():
+async def get_skins(current_user: User = Depends(get_current_active_user)):
     with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
         skin_proxy = DeTvdrVdrSkinInterface.new_proxy("de.tvdr.vdr", "/Skin", bus)
         code, data = await skin_proxy.list_skins()
@@ -952,14 +981,21 @@ async def get_skins():
 
 
 @router.get("/vdr/configfile")
-async def get_configfile(filename: AllowedVDRConfigfiles):
+async def get_configfile(
+    filename: AllowedVDRConfigfiles,
+    current_user: User = Depends(get_current_active_user),
+):
     path = allowed_vdr_config_files_options[filename].filepath
     print(f"got request for {filename=}")
     return FileResponse(path)
 
 
 @router.post("/vdr/configfile/{filename}")
-async def upload_configfile(filename: AllowedVDRConfigfiles, uploaded_file: UploadFile):
+async def upload_configfile(
+    filename: AllowedVDRConfigfiles,
+    uploaded_file: UploadFile,
+    current_user: User = Depends(get_current_active_user),
+):
     print(
         f"got {filename=} with {uploaded_file.size=} and {uploaded_file.content_type=}, {uploaded_file.headers}"
     )
@@ -968,7 +1004,9 @@ async def upload_configfile(filename: AllowedVDRConfigfiles, uploaded_file: Uplo
 
     async def event_generator():
         with contextlib.closing(sdbus.sd_bus_open_system()) as system_bus:
-            backend = YavdrSystemBackend.new_proxy(YAVDR_BACKEND_INTERFACE, "/", system_bus)
+            backend = YavdrSystemBackend.new_proxy(
+                YAVDR_BACKEND_INTERFACE, "/", system_bus
+            )
 
             queue: asyncio.Queue[tuple[Status, str]] = asyncio.Queue()
 
@@ -1020,14 +1058,16 @@ async def upload_configfile(filename: AllowedVDRConfigfiles, uploaded_file: Uplo
 
 
 @router.get("/vdr/channel")
-async def get_channel() -> str:
+async def get_channel(current_user: User = Depends(get_current_active_user)) -> str:
     """get the current chanel - format: channel_number channel_name"""
     response = [line async for line in async_send_svdrpcommand("chan")]
     return "\n".join(response)
 
 
 @router.post("/vdr/channel")
-async def switch_channel(channel: str) -> str:
+async def switch_channel(
+    channel: str, current_user: User = Depends(get_current_active_user)
+) -> str:
     """switch to the given channel"""
     response = [line async for line in async_send_svdrpcommand(f"chan {channel}")]
     return "\n".join(response)
@@ -1037,7 +1077,9 @@ RETRY_TIMEOUT = 15000  # milisecond
 
 
 @router.get("/vdr/status")
-async def vdr_status_signals(request: Request):
+async def vdr_status_signals(
+    request: Request, current_user: User = Depends(get_current_active_user)
+):
     """forward dbus2vdr's signals as Server Side Events"""
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:

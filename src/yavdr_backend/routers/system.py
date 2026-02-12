@@ -10,7 +10,7 @@ import sdbus
 from threading import Lock
 from collections.abc import Mapping
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from ruamel.yaml import YAML
 from sse_starlette import EventSourceResponse
@@ -22,6 +22,7 @@ from yavdr_backend.interfaces.system_backend import (
     UpdateTypeEnum,
 )
 from yavdr_backend.models.xorg import XorgConfig
+from yavdr_backend.routers.auth import User, get_current_active_user
 # from interfaces.system_backend import YAVDR_BACKEND_INTERFACE
 
 
@@ -35,7 +36,9 @@ class Playbook(BaseModel):
 
 
 @router.post("/system/playbook/rescan_displays")
-async def run_playbook(request: Request):
+async def run_playbook(
+    request: Request, current_user: User = Depends(get_current_active_user)
+):
     """forward dbus2vdr's signals as Server Side Events"""
 
     async def event_generator():
@@ -83,7 +86,9 @@ async def run_playbook(request: Request):
 
 
 @router.get("/system/xorg_config")
-async def get_xorg_config() -> XorgConfig:
+async def get_xorg_config(
+    current_user: User = Depends(get_current_active_user),
+) -> XorgConfig:
     config_file = Path("/etc/yavdr/display_config.yml")
     yaml = YAML(typ="safe")
     try:
@@ -105,7 +110,9 @@ async def get_xorg_config() -> XorgConfig:
 
 
 @router.get("/system/display_outputs")
-async def get_xrandr_facts() -> FileResponse:
+async def get_xrandr_facts(
+    current_user: User = Depends(get_current_active_user),
+) -> FileResponse:
     return FileResponse(
         "/etc/ansible/facts.d/display_outputs.fact",
         headers={"Cache-Control": "no-store"},
@@ -113,7 +120,9 @@ async def get_xrandr_facts() -> FileResponse:
 
 
 @router.get("/system/display_config")
-async def get_xorg_config_facts() -> FileResponse:
+async def get_xorg_config_facts(
+    current_user: User = Depends(get_current_active_user),
+) -> FileResponse:
     return FileResponse(
         "/etc/ansible/facts.d/display_config.fact",
         headers={"Cache-Control": "no-store"},
@@ -121,7 +130,11 @@ async def get_xorg_config_facts() -> FileResponse:
 
 
 @router.post("/system/xorg_config")
-async def set_xorg_confg(config: XorgConfig, request: Request) -> EventSourceResponse:
+async def set_xorg_confg(
+    config: XorgConfig,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+) -> EventSourceResponse:
     print("post xorg_config:", config)
 
     async def event_generator():
@@ -168,7 +181,9 @@ async def set_xorg_confg(config: XorgConfig, request: Request) -> EventSourceRes
 
 
 @router.post("/system/update/{update_type}")
-async def update_packages(update_type: UpdateTypeEnum) -> tuple[bool, str]:
+async def update_packages(
+    update_type: UpdateTypeEnum, current_user: User = Depends(get_current_active_user)
+) -> tuple[bool, str]:
     with closing(sdbus.sd_bus_open_system()) as system_bus:
         backend_connection = YavdrSystemBackend(system_bus).new_proxy(
             YAVDR_BACKEND_INTERFACE, "/", system_bus

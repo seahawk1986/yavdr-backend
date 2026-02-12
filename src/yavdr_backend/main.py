@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response, status
+from fastapi import Depends, FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 
 from fastapi.responses import JSONResponse
@@ -97,7 +97,7 @@ async def redirect_to_docs():
     return RedirectResponse(url="/docs")
 
 
-# mount the static ressources
+# mount the static resources
 # app.mount("/static", StaticFiles(directory="assets/static", html=True), name="static")
 
 loop_control = {"stop_loops": False}
@@ -143,7 +143,7 @@ async def stream_messages() -> SSE_StreamingResponse:
 
 
 @app.get("/system/status", response_model=systeminfo.SystemData)
-def system_info():
+def system_info(current_user: auth.User = Depends(auth.get_current_active_user)):
     """
     Returns a json object containing system status information
     """

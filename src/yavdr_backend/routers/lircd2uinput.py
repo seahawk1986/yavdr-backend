@@ -3,7 +3,8 @@ import time
 from contextlib import closing
 
 import sdbus
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
 # from gi.repository import GLib
 from pydantic import BaseModel
 from starlette.responses import JSONResponse
@@ -14,6 +15,7 @@ from starlette.status import (
 )
 
 from yavdr_backend.interfaces.lircd2uinput import DeYavdrLircd2uinputInterface
+from yavdr_backend.routers.auth import User, get_current_active_user
 # from tools.dbus import pydbus_error_handler
 
 
@@ -49,10 +51,14 @@ class Message(BaseModel):
         },
     },
 )
-async def hitkey(*, key_data: SingleKeyData):
+async def hitkey(
+    *, key_data: SingleKeyData, current_user: User = Depends(get_current_active_user)
+):
     key = key_data.key
     with closing(sdbus.sd_bus_open_system()) as system_bus:
-        _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
+        _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(
+            service_name="de.yavdr.lircd2uinput", object_path="/control", bus=system_bus
+        )
 
         try:
             if key:
@@ -70,10 +76,14 @@ async def hitkey(*, key_data: SingleKeyData):
             )
 
         if success:
-            return JSONResponse(status_code=HTTP_200_OK, content={"msg": "ok", "key": key},)
+            return JSONResponse(
+                status_code=HTTP_200_OK,
+                content={"msg": "ok", "key": key},
+            )
         else:
             return JSONResponse(
-                status_code=HTTP_400_BAD_REQUEST, content={"msg": "unknown key"},
+                status_code=HTTP_400_BAD_REQUEST,
+                content={"msg": "unknown key"},
             )
 
 
@@ -91,10 +101,14 @@ async def hitkey(*, key_data: SingleKeyData):
         },
     },
 )
-async def hitkeys(*, keys: MultipleKeyData):
+async def hitkeys(
+    *, keys: MultipleKeyData, current_user: User = Depends(get_current_active_user)
+):
     key_list: list[str] = keys.keys
     with closing(sdbus.sd_bus_open_system()) as system_bus:
-        _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(service_name='de.yavdr.lircd2uinput', object_path='/control', bus=system_bus)
+        _lird2uinput = DeYavdrLircd2uinputInterface.new_proxy(
+            service_name="de.yavdr.lircd2uinput", object_path="/control", bus=system_bus
+        )
 
         try:
             if key_list:
@@ -104,7 +118,8 @@ async def hitkeys(*, keys: MultipleKeyData):
                     success, _key_code = await _lird2uinput.emit_key(key)
                     if not success:
                         return JSONResponse(
-                            status_code=HTTP_400_BAD_REQUEST, content={"msg": f"unknown key '{key}'"},
+                            status_code=HTTP_400_BAD_REQUEST,
+                            content={"msg": f"unknown key '{key}'"},
                         )
                     time.sleep(0.1)
             else:
@@ -116,5 +131,7 @@ async def hitkeys(*, keys: MultipleKeyData):
                 content={"msg": f"lircd2uinput is not available: {err}"},
             )
         else:
-            return JSONResponse(status_code=HTTP_200_OK, content={"msg": "ok", "keys": keys},)
-
+            return JSONResponse(
+                status_code=HTTP_200_OK,
+                content={"msg": "ok", "keys": keys},
+            )

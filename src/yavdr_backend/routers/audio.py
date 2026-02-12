@@ -62,9 +62,9 @@ class PulseResponse(BaseModel):
 
 # @pydbus_error_handler
 @router.get("/audio/list_pulseaudio_sinks", response_model=PulseResponse)
-async def list_pulseaudio_sinks() -> (
-    PulseResponse
-):  # *, current_user: User = Depends(get_current_active_user)):
+async def list_pulseaudio_sinks(
+    current_user: User = Depends(get_current_active_user),
+) -> PulseResponse:
     with closing(sdbus.sd_bus_open_system()) as bus:
         pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
             "org.yavdr.PulseDBusCtl",
