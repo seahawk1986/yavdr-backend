@@ -13,7 +13,7 @@ import pkgconfig
 from enum import IntFlag, StrEnum
 from pathlib import Path
 from typing import Any
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, NonNegativeInt
 from fastapi import (
     APIRouter,
     Depends,
@@ -507,6 +507,19 @@ async def create_timer(
         f"NEWT {timer.active}:{timer.channel_id}:{timer.dt_start.strftime('%Y-%m-%d')}:{timer.dt_start.strftime('%H%M')}:{timer.dt_end.strftime('%H%M')}:{timer.prio}:{timer.lifetime}:{timer.title}:{timer.aux}"
     ):
         print(line)
+
+
+@router.delete("/vdr/timers/{id}")
+async def delete_timer(
+    id: NonNegativeInt, current_user: User = Depends(get_current_active_user)
+) -> bool:
+    success = False
+    async for line in async_send_svdrpcommand(f"DELT {id}"):
+        print(line)
+        parts = line.split(" ")
+        if "Timer" in parts and "deleted" in parts:
+            success = True
+    return success
 
 
 class ChannelMapping(BaseModel):
