@@ -10,6 +10,8 @@ import uuid
 
 import pkgconfig
 
+from dateutil import rrule
+
 from enum import IntFlag, StrEnum
 from pathlib import Path
 from typing import Any
@@ -339,6 +341,7 @@ class TimerDetails(BaseModel):
     is_recording: bool
     is_pending: bool
     in_vps_margin: bool
+    is_projected: bool = False
 
 
 class ChannelData(BaseModel):
@@ -414,6 +417,7 @@ async def get_vdr_timers(
         channel_ids[chan_id] = channel_name
 
     t_data: list[TimerDetails] = []
+    timer_start_dates: list[datetime.datetime] = []
     for timer in timers_detailed:
         d = DetailedTimer(*timer)
 
@@ -424,55 +428,85 @@ async def get_vdr_timers(
         stop_h = stop_formatted[:2]
         stop_m = stop_formatted[2:]
         timespan_str = f"{start_h}:{start_m} - {stop_h}:{stop_m}"
+        t_start = datetime.time(hour=int(start_h), minute=int(start_m))
+        t_stop = datetime.time(hour=int(stop_h), minute=int(stop_m))
         try:
             # try to get the day as a datetime.date
             day_start = datetime.date.fromisoformat(d.day_weekdays)
-            t_start = datetime.time(hour=int(start_h), minute=int(start_m))
-            t_stop = datetime.time(hour=int(stop_h), minute=int(stop_m))
+            timer_start_dates.append(day_start)
 
-            # check if the end point in hours is smaller than the start point - in this case we have a day change
+        except ValueError as err:
+            # TODO: handle VDR's repeating timers
+            # get the next timer
+            dt_start = None
+            if "@" in d.day_weekdays:
+                vdr_rrule, _, start_date = d.day_weekdays.partition("@")
+                dt_start = datetime.date.fromisoformat(start_date)
+            else:
+                vdr_rrule = d.day_weekdays
+
+            rrule_days = [
+                rrule.MO,
+                rrule.TU,
+                rrule.WE,
+                rrule.TH,
+                rrule.FR,
+                rrule.SA,
+                rrule.SU,
+            ]
+            active_days = [
+                rrule_days[i] for i, char in enumerate(vdr_rrule) if char != "-"
+            ]
+
+            timer_rrule = rrule.rrule(
+                freq=rrule.DAILY, byweekday=active_days, dtstart=dt_start
+            )
+            now = datetime.datetime.now()
+            now.replace(hour=int(start_h), minute=int(start_m))
+            timer_start_dates.extend(
+                list(
+                    timer_rrule.between(
+                        now, now + datetime.timedelta(weeks=4), inc=True
+                    )
+                )
+            )
+
+        for day_start in timer_start_dates:
             day_stop = (
                 day_start + datetime.timedelta(days=1)
                 if (t_stop < t_start)
                 else day_start
             )
-
             start = datetime.datetime.combine(day_start, t_start).timestamp()
             stop = datetime.datetime.combine(day_stop, t_stop).timestamp()
+            # check if the end point in hours is smaller than the start point - in this case we have a day change
 
-        except ValueError as err:
-            # TODO: handle VDR's repeating timers
-            print("special repeat timer by VDR:", err)
-            start = 0
-            stop = 0
-            duration = 0
-            continue
+            duration = stop - start
 
-        duration = stop - start
-
-        t_data.append(
-            TimerDetails(
-                id=d.id,
-                status_flags=d.flags,
-                raw=f"{d.flags}:{d.channel_id}:{d.day_weekdays}:{d.start}:{d.stop}:{d.lifetime}:{d.priority}:{d.aux}",
-                remote=d.remote,
-                channel_id=d.channel_id,
-                channel_name=channel_ids.get(d.channel_id, "?"),
-                day_weekdays=d.day_weekdays,
-                event_id=d.event_id,
-                start=int(start),
-                stop=int(stop),
-                time_span=timespan_str,
-                duration=int(duration),
-                priority=d.priority,
-                lifetime=d.lifetime,
-                filename=d.filename,
-                aux=d.aux,
-                is_recording=d.is_recording,
-                is_pending=d.is_pending,
-                in_vps_margin=d.in_vps_margin,
+            t_data.append(
+                TimerDetails(
+                    id=d.id,
+                    status_flags=d.flags,
+                    raw=f"{d.flags}:{d.channel_id}:{d.day_weekdays}:{d.start}:{d.stop}:{d.lifetime}:{d.priority}:{d.filename}:{d.aux}",
+                    remote=d.remote,
+                    channel_id=d.channel_id,
+                    channel_name=channel_ids.get(d.channel_id, "?"),
+                    event_id=d.event_id,
+                    day_weekdays=d.day_weekdays,
+                    start=int(start),
+                    stop=int(stop),
+                    time_span=timespan_str,
+                    duration=int(duration),
+                    priority=d.priority,
+                    lifetime=d.lifetime,
+                    filename=d.filename,
+                    aux=d.aux,
+                    is_recording=d.is_recording,
+                    is_pending=d.is_pending,
+                    in_vps_margin=d.in_vps_margin,
+                )
             )
-        )
+
     return t_data
 
 
@@ -506,6 +540,18 @@ async def create_timer(
     async for line in async_send_svdrpcommand(
         f"NEWT {timer.active}:{timer.channel_id}:{timer.dt_start.strftime('%Y-%m-%d')}:{timer.dt_start.strftime('%H%M')}:{timer.dt_end.strftime('%H%M')}:{timer.prio}:{timer.lifetime}:{timer.title}:{timer.aux}"
     ):
+        print(line)
+
+
+class VDRTimerStr(BaseModel):
+    timer_str: str
+
+
+@router.put("/vdr/timers")
+async def update_timer(
+    data: VDRTimerStr, current_user: User = Depends(get_current_active_user)
+):
+    async for line in async_send_svdrpcommand(f"UPDR {data.timer_str}"):
         print(line)
 
 
