@@ -249,6 +249,18 @@ async def play_recording(
         )
 
 
+@router.delete("/vdr/recordings/{recording_id}")
+async def delete_recording(
+    recording_id: NonNegativeInt, current_user: User = Depends(get_current_active_user)
+) -> str:
+    response: list[str] = [
+        line
+        async for line in async_send_svdrpcommand(f"DELR {recording_id}")
+        if line.startswith("250")
+    ]
+    return response[0]
+
+
 class Plugin(BaseModel):
     name: str
     version: str
@@ -258,11 +270,12 @@ class Plugin(BaseModel):
 async def get_vdr_plugins(
     *, current_user: User = Depends(get_current_active_user)
 ) -> list[Plugin]:
-    vdr_plugins = DeTvdrVdrPluginmanagerInterface.new_proxy(
-        "de.tvdr.vdr", "/Plugins", bus=sdbus.sd_bus_open_system()
-    )
-    plugins = await vdr_plugins.list()
-    return [Plugin(name=n, version=v) for n, v in plugins]
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_plugins = DeTvdrVdrPluginmanagerInterface.new_proxy(
+            "de.tvdr.vdr", "/Plugins", bus=bus
+        )
+        plugins = await vdr_plugins.list()
+        return [Plugin(name=n, version=v) for n, v in plugins]
 
 
 @router.get("/vdr/start_arguments")
@@ -282,27 +295,37 @@ async def write_args_config(
 
 @router.get("/vdr/current_epg")
 async def get_current_epg(current_user: User = Depends(get_current_active_user)):
-    vdr_epg = DeTvdrVdrEpgInterface.new_proxy(
-        "de.tvdr.vdr", "/EPG", bus=sdbus.sd_bus_open_system()
-    )
-    data = await vdr_epg.now("")
-    return data
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_epg = DeTvdrVdrEpgInterface.new_proxy("de.tvdr.vdr", "/EPG", bus=bus)
+        data = await vdr_epg.now("")
+        return data
+
+
+@router.get("/vdr/channels/current")
+async def get_current_channel(
+    current_user: User = Depends(get_current_active_user),
+) -> tuple[int, str]:
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
+            "de.tvdr.vdr", "/Channels", bus=bus
+        )
+        channel_id, current_channel = await vdr_channels.current()
+        return channel_id, current_channel
 
 
 @router.get("/vdr/current_channel_epg")
 async def get_current_channel_epg(
     current_user: User = Depends(get_current_active_user),
 ):
-    vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
-        "de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system()
-    )
-    vdr_epg = DeTvdrVdrEpgInterface.new_proxy(
-        "de.tvdr.vdr", "/EPG", bus=sdbus.sd_bus_open_system()
-    )
-    _, current_channel = await vdr_channels.current()
-    print(f"current channel: {current_channel}")
-    data = await vdr_epg.now(current_channel), await vdr_epg.next(current_channel)
-    return data
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
+            "de.tvdr.vdr", "/Channels", bus=bus
+        )
+        vdr_epg = DeTvdrVdrEpgInterface.new_proxy("de.tvdr.vdr", "/EPG", bus=bus)
+        _, current_channel = await vdr_channels.current()
+        print(f"current channel: {current_channel}")
+        data = await vdr_epg.now(current_channel), await vdr_epg.next(current_channel)
+        return data
 
 
 class Timer(BaseModel):
@@ -364,150 +387,153 @@ class ChannelData(BaseModel):
 async def get_vdr_timers(
     *, current_user: User = Depends(get_current_active_user)
 ) -> list[TimerDetails]:
-    vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
-        "de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system()
-    )
-    vdr_timers = DeTvdrVdrTimerInterface.new_proxy(
-        "de.tvdr.vdr", "/Timers", bus=sdbus.sd_bus_open_system()
-    )
-    # TODO: use svdrp, so we get the timer id, too
-    timers = [
-        line[4:].split(maxsplit=1)
-        async for line in async_send_svdrpcommand("LSTT")
-        if line.startswith("250")
-    ]
-    print(timers)
-    timers_detailed = (
-        await vdr_timers.list_detailed()
-    )  # TODO: do we want to use the more detailed vdr.Timers.ListDetailed ?
-    channels_raw, *_ = await vdr_channels.list("")
-    channel_ids: dict[str, str] = {}
-    for channel in channels_raw:
-        _chan_num, chan_str = channel
-        (
-            name,
-            freq,
-            params,
-            source,
-            _srate,
-            _vpid,
-            _apid,
-            _tpid,
-            _ca,
-            sid,
-            nid,
-            tid,
-            rid,
-        ) = chan_str.split(":")
-        if nid == "0" and tid == "0":
-            if source.startswith("S"):
-                offsets = {"H": 10000, "V": 20000, "L": 30000, "R": 40000}
-                offset = offsets[params[0]]
-            else:
-                offset = 0
-            tid = str(int(freq) + offset)
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
+            "de.tvdr.vdr", "/Channels", bus=bus
+        )
+        vdr_timers = DeTvdrVdrTimerInterface.new_proxy(
+            "de.tvdr.vdr", "/Timers", bus=bus
+        )
+        # TODO: use svdrp, so we get the timer id, too
+        timers = [
+            line[4:].split(maxsplit=1)
+            async for line in async_send_svdrpcommand("LSTT")
+            if line.startswith("250")
+        ]
+        print(timers)
+        timers_detailed = (
+            await vdr_timers.list_detailed()
+        )  # TODO: do we want to use the more detailed vdr.Timers.ListDetailed ?
+        channels_raw, *_ = await vdr_channels.list("")
+        channel_ids: dict[str, str] = {}
+        for channel in channels_raw:
+            _chan_num, chan_str = channel
+            (
+                name,
+                freq,
+                params,
+                source,
+                _srate,
+                _vpid,
+                _apid,
+                _tpid,
+                _ca,
+                sid,
+                nid,
+                tid,
+                rid,
+            ) = chan_str.split(":")
+            if nid == "0" and tid == "0":
+                if source.startswith("S"):
+                    offsets = {"H": 10000, "V": 20000, "L": 30000, "R": 40000}
+                    offset = offsets[params[0]]
+                else:
+                    offset = 0
+                tid = str(int(freq) + offset)
 
-        fields = [source, nid, tid, sid]
+            fields = [source, nid, tid, sid]
 
-        # the last part can be omitted if RID is 0
-        if rid != "0":
-            fields.append(rid)
-        chan_id = "-".join(fields)
-        channel_name = name.split(";")[0]
-        channel_ids[chan_id] = channel_name
+            # the last part can be omitted if RID is 0
+            if rid != "0":
+                fields.append(rid)
+            chan_id = "-".join(fields)
+            channel_name = name.split(";")[0]
+            channel_ids[chan_id] = channel_name
 
-    t_data: list[TimerDetails] = []
-    timer_start_dates: list[datetime.datetime] = []
-    for timer in timers_detailed:
-        d = DetailedTimer(*timer)
+        t_data: list[TimerDetails] = []
+        for timer in timers_detailed:
+            timer_start_dates: list[datetime.datetime] = []
+            d = DetailedTimer(*timer)
 
-        start_formatted = f"{d.start:04d}"
-        stop_formatted = f"{d.stop:04d}"
-        start_h = start_formatted[:2]
-        start_m = start_formatted[2:]
-        stop_h = stop_formatted[:2]
-        stop_m = stop_formatted[2:]
-        timespan_str = f"{start_h}:{start_m} - {stop_h}:{stop_m}"
-        t_start = datetime.time(hour=int(start_h), minute=int(start_m))
-        t_stop = datetime.time(hour=int(stop_h), minute=int(stop_m))
-        try:
-            # try to get the day as a datetime.date
-            day_start = datetime.date.fromisoformat(d.day_weekdays)
-            timer_start_dates.append(day_start)
+            start_formatted = f"{d.start:04d}"
+            stop_formatted = f"{d.stop:04d}"
+            start_h = start_formatted[:2]
+            start_m = start_formatted[2:]
+            stop_h = stop_formatted[:2]
+            stop_m = stop_formatted[2:]
+            timespan_str = f"{start_h}:{start_m} - {stop_h}:{stop_m}"
+            t_start = datetime.time(hour=int(start_h), minute=int(start_m))
+            t_stop = datetime.time(hour=int(stop_h), minute=int(stop_m))
+            try:
+                # try to get the day as a datetime.date
+                day_start = datetime.date.fromisoformat(d.day_weekdays)
+                timer_start_dates.append(day_start)
 
-        except ValueError as err:
-            # TODO: handle VDR's repeating timers
-            # get the next timer
-            dt_start = None
-            if "@" in d.day_weekdays:
-                vdr_rrule, _, start_date = d.day_weekdays.partition("@")
-                dt_start = datetime.date.fromisoformat(start_date)
-            else:
-                vdr_rrule = d.day_weekdays
+            except ValueError as err:
+                print(f"could not parse day_weekdays as date: {err=}")
+                # TODO: handle VDR's repeating timers
+                # get the next timer
+                dt_start = None
+                if "@" in d.day_weekdays:
+                    vdr_rrule, _, start_date = d.day_weekdays.partition("@")
+                    dt_start = datetime.date.fromisoformat(start_date)
+                else:
+                    vdr_rrule = d.day_weekdays
 
-            rrule_days = [
-                rrule.MO,
-                rrule.TU,
-                rrule.WE,
-                rrule.TH,
-                rrule.FR,
-                rrule.SA,
-                rrule.SU,
-            ]
-            active_days = [
-                rrule_days[i] for i, char in enumerate(vdr_rrule) if char != "-"
-            ]
+                rrule_days = [
+                    rrule.MO,
+                    rrule.TU,
+                    rrule.WE,
+                    rrule.TH,
+                    rrule.FR,
+                    rrule.SA,
+                    rrule.SU,
+                ]
+                active_days = [
+                    rrule_days[i] for i, char in enumerate(vdr_rrule) if char != "-"
+                ]
 
-            timer_rrule = rrule.rrule(
-                freq=rrule.DAILY, byweekday=active_days, dtstart=dt_start
-            )
-            now = datetime.datetime.now()
-            now.replace(hour=int(start_h), minute=int(start_m))
-            timer_start_dates.extend(
-                list(
-                    timer_rrule.between(
-                        now, now + datetime.timedelta(weeks=4), inc=True
+                timer_rrule = rrule.rrule(
+                    freq=rrule.DAILY, byweekday=active_days, dtstart=dt_start
+                )
+                now = datetime.datetime.now()
+                now.replace(hour=int(start_h), minute=int(start_m))
+                timer_start_dates.extend(
+                    list(
+                        timer_rrule.between(
+                            now, now + datetime.timedelta(weeks=4), inc=True
+                        )
                     )
                 )
-            )
 
-        for day_start in timer_start_dates:
-            day_stop = (
-                day_start + datetime.timedelta(days=1)
-                if (t_stop < t_start)
-                else day_start
-            )
-            start = datetime.datetime.combine(day_start, t_start).timestamp()
-            stop = datetime.datetime.combine(day_stop, t_stop).timestamp()
-            # check if the end point in hours is smaller than the start point - in this case we have a day change
-
-            duration = stop - start
-
-            t_data.append(
-                TimerDetails(
-                    id=d.id,
-                    status_flags=d.flags,
-                    raw=f"{d.flags}:{d.channel_id}:{d.day_weekdays}:{d.start}:{d.stop}:{d.lifetime}:{d.priority}:{d.filename}:{d.aux}",
-                    remote=d.remote,
-                    channel_id=d.channel_id,
-                    channel_name=channel_ids.get(d.channel_id, "?"),
-                    event_id=d.event_id,
-                    day_weekdays=d.day_weekdays,
-                    start=int(start),
-                    stop=int(stop),
-                    time_span=timespan_str,
-                    duration=int(duration),
-                    priority=d.priority,
-                    lifetime=d.lifetime,
-                    filename=d.filename,
-                    aux=d.aux,
-                    is_recording=d.is_recording,
-                    is_pending=d.is_pending,
-                    in_vps_margin=d.in_vps_margin,
+            print(f"{timer_start_dates=}")
+            for day_start in timer_start_dates:
+                day_stop = (
+                    day_start + datetime.timedelta(days=1)
+                    if (t_stop < t_start)
+                    else day_start
                 )
-            )
+                start = datetime.datetime.combine(day_start, t_start).timestamp()
+                stop = datetime.datetime.combine(day_stop, t_stop).timestamp()
+                # check if the end point in hours is smaller than the start point - in this case we have a day change
 
-    return t_data
+                duration = stop - start
+
+                t_data.append(
+                    TimerDetails(
+                        id=d.id,
+                        status_flags=d.flags,
+                        raw=f"{d.flags}:{d.channel_id}:{d.day_weekdays}:{d.start}:{d.stop}:{d.lifetime}:{d.priority}:{d.filename}:{d.aux}",
+                        remote=d.remote,
+                        channel_id=d.channel_id,
+                        channel_name=channel_ids.get(d.channel_id, "?"),
+                        event_id=d.event_id,
+                        day_weekdays=d.day_weekdays,
+                        start=int(start),
+                        stop=int(stop),
+                        time_span=timespan_str,
+                        duration=int(duration),
+                        priority=d.priority,
+                        lifetime=d.lifetime,
+                        filename=d.filename,
+                        aux=d.aux,
+                        is_recording=d.is_recording,
+                        is_pending=d.is_pending,
+                        in_vps_margin=d.in_vps_margin,
+                    )
+                )
+
+        return t_data
 
 
 class TimerStatus(IntFlag):
@@ -529,18 +555,16 @@ class TimerData(BaseModel):
     aux: str = Field(default="")
 
 
-@router.post("/vdr/newt")
+@router.post("/vdr/timers")
 async def create_timer(
     timer: TimerData, current_user: User = Depends(get_current_active_user)
 ):
-    print(
-        f"NEWT {timer.active}:{timer.channel_id}:{timer.dt_start.strftime('%Y-%m-%d')}:{timer.dt_start.strftime('%H%M')}:{timer.dt_end.strftime('%H%M')}:{timer.prio}:{timer.lifetime}:{timer.title}:{timer.aux}"
-    )
-    # TODO: get time before/after timer
-    async for line in async_send_svdrpcommand(
-        f"NEWT {timer.active}:{timer.channel_id}:{timer.dt_start.strftime('%Y-%m-%d')}:{timer.dt_start.strftime('%H%M')}:{timer.dt_end.strftime('%H%M')}:{timer.prio}:{timer.lifetime}:{timer.title}:{timer.aux}"
-    ):
-        print(line)
+    timer_str = f"{timer.active}:{timer.channel_id}:{timer.dt_start.strftime('%Y-%m-%d')}:{timer.dt_start.strftime('%H%M')}:{timer.dt_end.strftime('%H%M')}:{timer.prio}:{timer.lifetime}:{timer.title}:{timer.aux}"
+    print(f"creating timer: '{timer_str}'")
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        timer_proxy = DeTvdrVdrTimerInterface.new_proxy("de.tvdr.vdr", "/Timers", bus)
+        r = await timer_proxy.new(timer_str)
+        print(r)
 
 
 class VDRTimerStr(BaseModel):
@@ -580,20 +604,21 @@ class ChannelMapping(BaseModel):
 async def get_vdr_channels(
     current_user: User = Depends(get_current_active_user),
 ) -> list[ChannelMapping]:
-    vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
-        "de.tvdr.vdr", "/Channels", bus=sdbus.sd_bus_open_system()
-    )
-
-    channels: list[ChannelMapping] = []
-    channels_raw, _status_code, _message = await vdr_channels.list(":groups")
-    print(f"{channels_raw=}")
-    for channel in channels_raw:
-        print(f"{channel=}")
-        chan_num, chan_str = channel
-        channels.append(
-            ChannelMapping(channel_number=chan_num, channel_string=chan_str)
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        vdr_channels = DeTvdrVdrChannelInterface.new_proxy(
+            "de.tvdr.vdr", "/Channels", bus=bus
         )
-    return channels
+
+        channels: list[ChannelMapping] = []
+        channels_raw, _status_code, _message = await vdr_channels.list(":groups")
+        print(f"{channels_raw=}")
+        for channel in channels_raw:
+            print(f"{channel=}")
+            chan_num, chan_str = channel
+            channels.append(
+                ChannelMapping(channel_number=chan_num, channel_string=chan_str)
+            )
+        return channels
 
 
 @router.post("/vdr/channels")
@@ -904,6 +929,7 @@ async def get_channel_epg(
 ) -> list[EpgEntry]:
     epg_entries: list[EpgEntry] = []
     entry: None | EpgEntry = None
+    skip_event = False
     try:
         event_data = {}
         async for line in async_send_svdrpcommand(f"LSTE {channel_id}"):
@@ -912,11 +938,17 @@ async def get_channel_epg(
             match field_type:
                 case EventEntryFields.START:
                     _, e_id, start, duration, tid, version = line.split()
+                    dt_start = datetime.datetime.fromtimestamp(int(start))
+                    td_duration = datetime.timedelta(seconds=int(duration))
+                    dt_end = dt_start + td_duration
+                    if datetime.datetime.now() > dt_end:
+                        skip_event = True
+
                     event_data: dict[str, Any] = {
                         "event_id": e_id,
-                        "start": datetime.datetime.fromtimestamp(int(start)),
+                        "start": dt_start,
                         "start_ts": start,
-                        "duration": datetime.timedelta(seconds=int(duration)),
+                        "duration": td_duration,
                         "table_id": tid,
                         "version": version,
                         "channel_id": channel_id,
@@ -934,7 +966,11 @@ async def get_channel_epg(
                 case EventEntryFields.END:
                     # end of Entry
                     entry = EpgEntry(**event_data)
-                    epg_entries.append(entry)
+                    if skip_event:
+                        print("skipping event", entry)
+                        skip_event = False
+                    else:
+                        epg_entries.append(entry)
                 case _:
                     pass
     except ValueError:
