@@ -551,7 +551,7 @@ class VDRTimerStr(BaseModel):
 async def update_timer(
     data: VDRTimerStr, current_user: User = Depends(get_current_active_user)
 ):
-    async for line in async_send_svdrpcommand(f"UPDR {data.timer_str}"):
+    async for line in async_send_svdrpcommand(f"UPDT {data.timer_str}"):
         print(line)
 
 
