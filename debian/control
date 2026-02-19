@@ -20,11 +20,13 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-dateutil,
   python3-fastapi,
   python3-h2,
+  python3-pam,
   python3-psutil,
   python3-pydantic,
   python3-ruamel.yaml,
   python3-sdbus,
   uvicorn,
+  yavdr-pulse-dbusctl,
 Description: Webfrontend for yaVDR
   yavdr-webfrontend offers a configuration interface for a yaVDR system.
   .
