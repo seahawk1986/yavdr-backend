@@ -51,41 +51,26 @@ async def run_playbook(
             except Exception:
                 logging.exception("failure when awaiting run rescan_displays()")
                 return
-            runner_ident = None
             async for event in backend_connection.ansible_event:
                 # yield event
-                message_type, message = event
-                # print(f"{message_type} - {message}")
-                if await request.is_disconnected():
-                    break
+                current_job_uuid, message_type, message = event
+                if current_job_uuid != job_uuid:
+                    continue
+                if message_type == Status.STARTING:
+                    print("start of stream")
+                    continue
                 if message_type == Status.DONE:
-                    job_uuid = None
-                    runner_ident = None
-                    # yield message
-                    # yield {'event': ,'state': 'done'}
                     print("end of stream ...")
                     return
-                elif message_type == Status.STARTING:
-                    _job_uuid, _runner_ident = message.split()
-                    if _job_uuid == job_uuid:
-                        runner_ident = _runner_ident
-                        print(f"set {runner_ident=}")
-                    continue
+                if await request.is_disconnected():
+                    break
                 else:
-                    try:
-                        data = json.loads(message)
-                        if data.get("event", {}).get(
-                            "runner_ident"
-                        ) == runner_ident or data.get("status", {}).get("runner_ident"):
-                            yield message
-                    except json.JSONDecodeError as e:
-                        print(e, file=sys.stderr)
-                        # yield f"{e}: {message}"
+                    yield message
 
     return EventSourceResponse(event_generator(), send_timeout=5)
 
 
-@router.get("/system/xorg_config")
+@router.get("/system/display_config")
 async def get_xorg_config(
     current_user: User = Depends(get_current_active_user),
 ) -> XorgConfig:
@@ -95,7 +80,7 @@ async def get_xorg_config(
         with open(config_file) as f:
             data: dict[str, Any] = yaml.load(f)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
     except IOError:
-        fallback_config_file = Path("/etc/ansible/facts.d/monitor_config.fact")
+        fallback_config_file = Path("/etc/ansible/facts.d/display_config.fact")
         print(f"fallback to {fallback_config_file=}")
         try:
             with open(fallback_config_file) as f:
@@ -119,14 +104,14 @@ async def get_xrandr_facts(
     )
 
 
-@router.get("/system/display_config")
-async def get_xorg_config_facts(
-    current_user: User = Depends(get_current_active_user),
-) -> FileResponse:
-    return FileResponse(
-        "/etc/ansible/facts.d/display_config.fact",
-        headers={"Cache-Control": "no-store"},
-    )
+# @router.get("/system/display_config")
+# async def get_xorg_config_facts(
+#     current_user: User = Depends(get_current_active_user),
+# ) -> FileResponse:
+#     return FileResponse(
+#         "/etc/ansible/facts.d/display_config.fact",
+#         headers={"Cache-Control": "no-store"},
+#     )
 
 
 @router.post("/system/xorg_config")
@@ -149,10 +134,12 @@ async def set_xorg_confg(
             runner_ident = None
             async for event in backend_connection.ansible_event:
                 # yield event
-                message_type, message = event
+                current_job_uuid, message_type, message = event
                 # print(f"{message_type} - {message}")
                 if await request.is_disconnected():
                     break
+                if current_job_uuid != job_uuid:
+                    continue
                 if message_type == Status.DONE:
                     job_uuid = None
                     runner_ident = None

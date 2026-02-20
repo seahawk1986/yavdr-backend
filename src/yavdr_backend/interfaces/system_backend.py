@@ -138,7 +138,7 @@ class Status(StrEnum):
 
 
 class Job(Protocol):
-    uuid: UUID
+    uuid: str
 
     async def run(self) -> Any: ...
 
@@ -146,7 +146,7 @@ class Job(Protocol):
 @dataclass
 class FileJob:
     # model_config = ConfigDict(arbitrary_types_allowed=True)
-    uuid: UUID
+    uuid: str
     file_content: bytes
     filepath: Path
     required_stopped_services: list[str]
@@ -217,7 +217,7 @@ class FileJob:
 
 @dataclass
 class AnsibleJob:
-    uuid: UUID
+    uuid: str
     playbook: str
     backend: "YavdrSystemBackend"
     extravars: dict[str, Any] = Field(default_factory=dict)
@@ -229,23 +229,28 @@ class AnsibleJob:
         if not self.current_runner and status_data.get("status") == Status.STARTING:
             self.current_runner = status_data.get("runner_ident", "")
             print((str(Status.STARTING), f"{self.uuid} {self.current_runner}"))
+            # TODO if the runner uses the given uuid, we don't need those Status events
             self.backend.ansible_event.emit(
-                (str(Status.STARTING), f"{self.uuid} {self.current_runner}")
+                (self.uuid, str(Status.STARTING), f"{self.uuid} {self.current_runner}")
             )
         self.backend.ansible_event.emit(
             (
+                self.uuid,
                 status_data.get("runner_ident", ""),
                 json.dumps({"status": status_data}, skipkeys=True),
             )
         )
         if status_data.get("status") in ("successful", "failed", "timeout"):
-            self.backend.ansible_event.emit((Status.DONE, self.current_runner))
+            self.backend.ansible_event.emit(
+                (self.uuid, Status.DONE, self.current_runner)
+            )
             self.current_runner = ""
 
     def _event_handler(self, event_data: dict[str, Any]) -> None:
         print(f"{event_data=}")
         self.backend.ansible_event.emit(
             (
+                self.uuid,
                 event_data.get("runner_ident", ""),
                 json.dumps({"event": event_data}, skipkeys=True),
             )
@@ -260,6 +265,7 @@ class AnsibleJob:
                 ansible_runner.run,  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
                 private_data_dir=ANSIBLE_DIR,
                 playbook=self.playbook,
+                ident=self.uuid,
                 status_handler=self._status_handler,
                 event_handler=self._event_handler,
                 # finished_callback=self._finished_callback,
@@ -268,7 +274,7 @@ class AnsibleJob:
         except Exception:
             logging.exception("running playbook failed")
         print(f"job {self.uuid} finished")
-        # self.ansible_event.emit(Status.DONE)
+        # self.ansible_event.emit(self.uuid, Status.DONE)
 
 
 class AllowedVDRConfigfiles(StrEnum):
@@ -341,7 +347,6 @@ class YavdrSystemBackend(
         while True:
             job = await self.job_queue.get()
             self.current_job_uuid = job.uuid
-            # self.ansible_event.emit(f"{Status.NEW} {job.uuid}")
             with JOB_LOCK:
                 await job.run()
                 self.job_uuid = ""
@@ -373,7 +378,7 @@ class YavdrSystemBackend(
         config: dict[str, Any] = (
             json.loads(playbook_variables) if playbook_variables else {}
         )
-        job_uuid = uuid.uuid1()
+        job_uuid = str(uuid.uuid1())
         self.job_uuid = f"{job_uuid}"
         self.job_queue.put_nowait(
             AnsibleJob(
@@ -392,7 +397,7 @@ class YavdrSystemBackend(
     async def rescan_displays(self) -> str:
         print("rescan displays ...")
         logging.info("called rescan_display()")
-        job_uuid = uuid.uuid1()
+        job_uuid = str(uuid.uuid1())
         self.job_uuid = f"{job_uuid}"
         self.job_queue.put_nowait(
             AnsibleJob(
@@ -429,7 +434,7 @@ class YavdrSystemBackend(
     )
     async def set_display_configuration(self) -> str:
         print("configure display settings ...")
-        job_uuid = uuid.uuid1()
+        job_uuid = str(uuid.uuid1())
         self.job_uuid = f"{job_uuid}"
         self.job_queue.put_nowait(
             AnsibleJob(
@@ -442,8 +447,8 @@ class YavdrSystemBackend(
         )
         return str(job_uuid)
 
-    @sdbus.dbus_signal_async(signal_signature="ss")
-    def ansible_event(self) -> tuple[str, str]:
+    @sdbus.dbus_signal_async(signal_signature="sss")
+    def ansible_event(self) -> tuple[str, str, str]:
         raise NotImplementedError
 
     @sdbus.dbus_signal_async(signal_signature="ss")
@@ -477,7 +482,7 @@ class YavdrSystemBackend(
                 else f"method {__name__}: no configuration for {name=}"
             )
         else:
-            job_uuid = uuid.uuid1()
+            job_uuid = str(uuid.uuid1())
             if len(options.required_stopped_services) == 0:
                 # if we only need to write the file, we can return early
                 print(f"writing data from {fd=} to {options.filepath=}...")
@@ -501,7 +506,7 @@ class YavdrSystemBackend(
                 except Exception as err:
                     print("Error when queuing FileJob:", err)
 
-            return str(job_uuid)
+            return job_uuid
 
     @sdbus.dbus_method_async(
         input_signature="s", result_signature="bs", flags=sdbus.DbusUnprivilegedFlag

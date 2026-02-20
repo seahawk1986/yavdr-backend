@@ -17,7 +17,10 @@ from pydantic import BaseModel, Field, SecretStr, ValidationError
 import sdbus
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from yavdr_backend.interfaces.system_backend import YAVDR_BACKEND_INTERFACE, YavdrSystemBackend
+from yavdr_backend.interfaces.system_backend import (
+    YAVDR_BACKEND_INTERFACE,
+    YavdrSystemBackend,
+)
 from yavdr_backend.models.auth import Login
 import yavdr_backend.tools.pam as pam
 
@@ -25,7 +28,7 @@ router = APIRouter()
 
 # TODO: generate a new token on earch startup
 # SECRET_KEY = token_hex(32)
-SECRET_KEY = '5a031715ae22a2690ee9f2fa3acb1cc56c142062eef2b2b752c44330a4e50365'
+SECRET_KEY = "5a031715ae22a2690ee9f2fa3acb1cc56c142062eef2b2b752c44330a4e50365"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 60  # do we need to make this configurable?
 
@@ -36,7 +39,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str = ''
+    username: str = ""
     scopes: list[str] = []
 
 
@@ -51,15 +54,13 @@ supported_scopes = {
 }
 
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/token",
-    scopes=supported_scopes
-)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", scopes=supported_scopes)
 
 
 def get_user_groups(username: str) -> list[str]:
     return [
-        user_groups.gr_name for user_groups in grp.getgrall()
+        user_groups.gr_name
+        for user_groups in grp.getgrall()
         if username in user_groups.gr_mem
     ]
 
@@ -76,16 +77,18 @@ def get_user(username: str):
 full_access_groups = set(["adm", "log", "remote"])
 
 
-def create_access_token(*, data: dict[str, Any], expires_delta: timedelta|None = None):
+def create_access_token(
+    *, data: dict[str, Any], expires_delta: timedelta | None = None
+):
     to_encode = data.copy()
-    if not (scopes := to_encode.get('scopes')):
+    if not (scopes := to_encode.get("scopes")):
         scopes = supported_scopes
-    groups = set(get_user_groups(to_encode.get('sub', set())))
+    groups = set(get_user_groups(to_encode.get("sub", set())))
     # if the user is a member of one of the adminstrative groups and did not request
     # specific persmissions
     if any(g for g in groups if g in ("adm", "wheel", "sudo")):
         groups |= full_access_groups
-    to_encode['scopes'] = [s for s in scopes if s in groups]
+    to_encode["scopes"] = [s for s in scopes if s in groups]
     # if a expiration date has been requested, use it
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -98,8 +101,7 @@ def create_access_token(*, data: dict[str, Any], expires_delta: timedelta|None =
 
 
 async def get_current_user(
-    security_scopes: SecurityScopes,
-    token: str = Depends(oauth2_scheme)
+    security_scopes: SecurityScopes, token: str = Depends(oauth2_scheme)
 ):
     if security_scopes.scopes:
         authenticate_value = f"Bearer scope='{security_scopes.scope_str}'"
@@ -136,7 +138,7 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)#, scopes: List[str] = None
+    current_user: User = Depends(get_current_user),  # , scopes: List[str] = None
 ) -> User:
     return current_user
 
@@ -164,13 +166,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     Otherwise the requested scopes are returned if the user is a member in the respective groups.
     """
     with closing(sdbus.sd_bus_open_system()) as system_bus:
-        login = Login(username=form_data.username, password=SecretStr(form_data.password))
+        login = Login(
+            username=form_data.username, password=SecretStr(form_data.password)
+        )
 
         backend_connection = YavdrSystemBackend(system_bus).new_proxy(
-                YAVDR_BACKEND_INTERFACE, "/", system_bus
-            )
+            YAVDR_BACKEND_INTERFACE, "/", system_bus
+        )
 
-        if not await backend_connection.check_login(login.username, login.password.get_secret_value()):
+        if not await backend_connection.check_login(
+            login.username, login.password.get_secret_value()
+        ):
             raise HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
