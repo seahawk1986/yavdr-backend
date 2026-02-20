@@ -84,7 +84,8 @@ async def get_xorg_config(
         print(f"fallback to {fallback_config_file=}")
         try:
             with open(fallback_config_file) as f:
-                data = json.load(f).get("monitor_config", {})
+                data = json.load(f)
+                print(f"got json data: {data}")
         except Exception:
             logging.exception("could not load monitor_config, please rescan displays")
             raise
