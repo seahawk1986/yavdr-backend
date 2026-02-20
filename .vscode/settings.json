@@ -10,14 +10,19 @@
         "**/.venv": true,
         "**/mitogen*": true,
         "**/node_modules": true,
+        "**/artifacts": true,
+        "**/dist": true,
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,
+        "**/artifacts/**": true,
+        "**/.git/**": true,
         "**/__pycache__": true,
         "**/*.pyc": true,
         "**/.venv": true,
         "**/mitogen*": true,
         "**/node_modules": true,
+        "**/dist/**": true,
     },
     "python.testing.pytestArgs": [
         "app"
