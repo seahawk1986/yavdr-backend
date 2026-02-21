@@ -528,23 +528,26 @@ class YavdrSystemBackend(
                 _stdout, stderr = await p.communicate()
                 if p.returncode != 0:
                     raise ValueError(stderr)
-                u = await asyncio.create_subprocess_exec(
-                    "apt-get",
-                    "dist-upgrade",
-                    "-y",
-                    "-o",
-                    'Dpkg::Options::="--force-confdef"',
-                    "-o",
-                    'Dpkg::Options::="--force-confold"',
+                # u = await asyncio.create_subprocess_exec(
+                u = await asyncio.create_subprocess_shell(
+                    'apt-get full-upgrade -y -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef"',
+                    # "apt-get",
+                    # "dist-upgrade",
+                    # "-y",
+                    # "-o",
+                    # 'Dpkg::Options::="--force-confdef"',
+                    # "-o",
+                    # 'Dpkg::Options::="--force-confold"',
                     env={"DEBIAN_FRONTEND": "noninteractive"},
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                _stdout, stderr = await u.communicate()
+                stdout, stderr = await u.communicate()
                 if u.returncode != 0:
-                    print(stderr)
+                    print(f"{stdout=}")
+                    print(f"{stderr=}")
                     raise ValueError(stderr)
-                print(_stdout, stderr)
+                print("apt update && apt-get dist-upgrade done:", stdout, stderr)
 
             async def snap_update():
                 p = await asyncio.create_subprocess_exec(
@@ -584,7 +587,7 @@ class YavdrSystemBackend(
                     raise ValueError(stderr)
                 print(_stdout)
                 p = await asyncio.create_subprocess_shell(
-                    """\
+                    r"""\
     test -f /proc/driver/nvidia/version || exit 0
     installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version)
     version_part=$(sed 's/\./-/g' <<< "$installed_version")
