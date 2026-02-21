@@ -674,6 +674,8 @@ async def get_vdr_channels_with_groups(
 ) -> list[Channel]:
     channels: list[Channel] = []
     async for line in async_send_svdrpcommand("lstc :ids :groups"):
+        if not line or "-" not in line:
+            continue
         _code, r = line.strip().split("-", maxsplit=1)
         # print(r)
         # GROUP_RE = re.compile(r'(?P<number>\d+)\s:((?P<group_offset>@\d+)\s)?(?P<group_name>.+)')
