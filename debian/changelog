@@ -1,3 +1,9 @@
+yavdr-backend (0.1.12-0yavdr0~resolute) resolute; urgency=medium
+
+  * fix log-level option 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 21 Feb 2026 13:02:07 +0100
+
 yavdr-backend (0.1.11-0yavdr0~resolute) resolute; urgency=medium
 
   * rebuild 

@@ -6,4 +6,4 @@ exec /usr/bin/uvicorn yavdr_backend.main:app \
   --uds /run/yavdr-backend/uvicorn.sock \
   --proxy-headers \
   --forwarded-allow-ips "127.0.0.1" \
-  --loglevel "$LOGLEVEL"
+  --log-level "$LOGLEVEL"
