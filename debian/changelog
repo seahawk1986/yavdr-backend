@@ -1,3 +1,9 @@
+yavdr-backend (0.1.13-0yavdr0~resolute) resolute; urgency=medium
+
+  * remove temporary file from debian dir
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sat, 21 Feb 2026 13:19:21 +0100
+
 yavdr-backend (0.1.12-0yavdr0~resolute) resolute; urgency=medium
 
   * fix log-level option 

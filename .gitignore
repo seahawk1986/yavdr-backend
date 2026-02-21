@@ -7,3 +7,4 @@ node_modules/
 .venv-3.12/*
 assets/static/
 old_system_backend/
+debian/.*
