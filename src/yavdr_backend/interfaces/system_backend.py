@@ -159,45 +159,47 @@ class FileJob:
             bus=self.backend.system_bus,
         )
         units_to_start_again: list[OrgFreedesktopSystemd1UnitInterface] = []
-        async with asyncio.TaskGroup() as group:
+        async with asyncio.timeout(delay=60):
+            async with asyncio.TaskGroup() as group:
 
-            async def wait_for_unit_stop(
-                unit_proxy: OrgFreedesktopSystemd1UnitInterface,
-            ):
-                async for s in unit_proxy.properties_changed:
-                    print(
-                        f"got status change for {unit_proxy.names}:",
-                        p := parse_properties_changed(
-                            OrgFreedesktopSystemd1UnitInterface, s, "ignore"
-                        ),
+                async def wait_for_unit_stop(
+                    unit_proxy: OrgFreedesktopSystemd1UnitInterface,
+                ):
+                    async for s in unit_proxy.properties_changed:
+                        print(
+                            f"got status change for {unit_proxy.names}:",
+                            p := parse_properties_changed(
+                                OrgFreedesktopSystemd1UnitInterface, s, "ignore"
+                            ),
+                        )
+                        if p.get("active_state") in ("failed", "inactive") and p.get(
+                            "sub_state"
+                        ) in ("stopped", "dead", "failed"):
+                            print(f"unit {unit_proxy.names} stopped")
+                            return
+
+                for unit in self.required_stopped_services:
+                    print(f"stopping {unit=}")
+                    object_path = await systemd_manager.load_unit(unit)
+                    await systemd_manager.mask_unit_files(
+                        self.required_stopped_services, True, True
                     )
-                    if p.get("active_state") in ("failed", "inactive") and p.get(
-                        "sub_state"
-                    ) in ("stopped", "dead"):
-                        print(f"unit {unit_proxy.names} stopped")
-                        return
+                    print(f"load unit: {object_path=}")
+                    unit_proxy = OrgFreedesktopSystemd1UnitInterface.new_proxy(
+                        service_name="org.freedesktop.systemd1",
+                        object_path=object_path,
+                        bus=self.backend.system_bus,
+                    )
+                    print("checking state of unit...")
+                    active_state = await unit_proxy.active_state.get_async()
+                    print(f"state of unit was: {active_state=}")
+                    if active_state in ("active", "reloading", "activating"):
+                        print("unit seems to be active, adding to list to restart...")
+                        units_to_start_again.append(unit_proxy)
 
-            for unit in self.required_stopped_services:
-                print(f"stopping {unit=}")
-                object_path = await systemd_manager.load_unit(unit)
-                await systemd_manager.mask_unit_files(
-                    self.required_stopped_services, True, True
-                )
-                print(f"load unit: {object_path=}")
-                unit_proxy = OrgFreedesktopSystemd1UnitInterface.new_proxy(
-                    service_name="org.freedesktop.systemd1",
-                    object_path=object_path,
-                    bus=self.backend.system_bus,
-                )
-                print("checking state of unit...")
-                active_state = await unit_proxy.active_state.get_async()
-                print(f"state of unit was: {active_state=}")
-                if active_state in ("active", "reloading", "activating"):
-                    print("unit seems to be active, adding to list to restart...")
-                    units_to_start_again.append(unit_proxy)
+                    group.create_task(wait_for_unit_stop(unit_proxy))
+                    group.create_task(unit_proxy.stop("replace"))
 
-                group.create_task(wait_for_unit_stop(unit_proxy))
-                group.create_task(unit_proxy.stop("replace"))
         print(f"writing file {self.filepath}...")
 
         self.filepath.write_bytes(self.file_content)
