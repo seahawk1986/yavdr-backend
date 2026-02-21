@@ -3,6 +3,7 @@ Description=yavdr Backend API
 After=network-online.target
 
 [Service]
+Environment=LOGLEVEL=WARN
 Type=simple
 User=yavdr-backend
 Group=yavdr-backend
