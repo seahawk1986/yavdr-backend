@@ -88,7 +88,9 @@ async def get_xorg_config(
                 print(f"got json data: {data}")
         except Exception:
             logging.exception("could not load monitor_config, please rescan displays")
-            raise
+            raise ValueError(
+                'could not load "/etc/ansible/facts.d/display_config.fact", please rescan displays'
+            )
 
     print(f"{data=}")
     config: XorgConfig = XorgConfig.model_validate(data)
