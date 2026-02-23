@@ -1,21 +1,26 @@
 # Module for system information (and possible operations)
+import asyncio
 from contextlib import closing
+import contextlib
 import json
 import logging
 from pathlib import Path
 import sys
-from typing import Any
+import tempfile
+from typing import Annotated, Any
 from fastapi.responses import FileResponse
 import sdbus
 from threading import Lock
 from collections.abc import Mapping
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from pydantic import BaseModel
 from ruamel.yaml import YAML
 from sse_starlette import EventSourceResponse
 
 from yavdr_backend.interfaces.system_backend import (
+    AllowedSystemConfigfiles,
+    allowed_system_config_files_options,
     YavdrSystemBackend,
     Status,
     YAVDR_BACKEND_INTERFACE,
@@ -180,3 +185,85 @@ async def update_packages(
         )
         success, message = await backend_connection.update(update_type)
         return success, message
+
+
+class ConfigfileUploadData(BaseModel):
+    filename: AllowedSystemConfigfiles
+    uploaded_file: UploadFile
+
+
+@router.get("/system/configfile")
+async def get_configfile(
+    filename: AllowedSystemConfigfiles,
+    current_user: User = Depends(get_current_active_user),
+) -> FileResponse:
+    path = allowed_system_config_files_options[filename].filepath
+    print(f"got request for {filename=}")
+    return FileResponse(path)
+
+
+@router.post("/system/configfile")
+async def upload_configfile(
+    filename: Annotated[AllowedSystemConfigfiles, Form()],
+    uploaded_file: Annotated[UploadFile, File()],
+    current_user: User = Depends(get_current_active_user),
+):
+    print(
+        f"got {filename=} with {uploaded_file.size=} and {uploaded_file.content_type=}, {uploaded_file.headers}"
+    )
+
+    content = await uploaded_file.read()
+
+    async def event_generator():
+        with contextlib.closing(sdbus.sd_bus_open_system()) as system_bus:
+            backend = YavdrSystemBackend.new_proxy(
+                YAVDR_BACKEND_INTERFACE, "/", system_bus
+            )
+
+            queue: asyncio.Queue[tuple[Status, str]] = asyncio.Queue()
+
+            async def wait_for_done():
+                async for event in backend.file_event:
+                    print(event)
+                    event_type, _msg = event
+                    await queue.put((Status(event_type), _msg))
+                    if event_type == Status.DONE:
+                        print("wait_for_done ends")
+                        return
+
+            async def share_file(content: bytes):
+                with tempfile.TemporaryFile() as shared_file:
+                    shared_file.write(content)
+                    shared_file.flush()
+                    fd = shared_file.fileno()
+                    try:
+                        uuid = await backend.save_file(str(filename), fd)
+                    except sdbus.DbusFailedError as err:
+                        print(f"error awaiting backend.save_file: {err}")
+                        await queue.put((Status.DONE, "failed"))
+                        return
+                    else:
+                        await queue.put((Status.STARTING, uuid))
+
+            async with asyncio.TaskGroup() as group:
+                group.create_task(wait_for_done())
+                group.create_task(share_file(content))
+                # TODO: this times out if we need a lot of time
+                while True:
+                    event: tuple[Status, str] = await queue.get()
+                    print("got event:", event)
+                    # if request.is_disconnected():
+                    #     print("client disconnected ...")
+                    #     break
+
+                    state, msg = event
+                    yield json.dumps({"state": state, "msg": msg})
+
+                    queue.task_done()
+                    if state == Status.DONE:
+                        print("done")
+                        await asyncio.sleep(1)
+                        break
+
+    # TODO: make this two separate things - one for the post request and one streaming response for the status
+    return EventSourceResponse(event_generator(), send_timeout=5)

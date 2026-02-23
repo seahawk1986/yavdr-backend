@@ -14,11 +14,13 @@ from dateutil import rrule
 
 from enum import IntFlag, StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from pydantic import Field, BaseModel, NonNegativeInt
 from fastapi import (
     APIRouter,
     Depends,
+    File,
+    Form,
     Request,
     UploadFile,
     WebSocket,
@@ -61,6 +63,7 @@ from yavdr_backend.interfaces.vdr_status import (
     signal_generator as vdr_status_event_generator,
 )
 from yavdr_backend.interfaces.system_backend import (
+    AllowedSystemConfigfiles,
     AllowedVDRConfigfiles,
     Status,
     YavdrSystemBackend,
@@ -1082,15 +1085,16 @@ async def get_configfile(
     filename: AllowedVDRConfigfiles,
     current_user: User = Depends(get_current_active_user),
 ):
+    filename = filename
     path = allowed_vdr_config_files_options[filename].filepath
     print(f"got request for {filename=}")
     return FileResponse(path)
 
 
-@router.post("/vdr/configfile/{filename}")
+@router.post("/vdr/configfile/")
 async def upload_configfile(
-    filename: AllowedVDRConfigfiles,
-    uploaded_file: UploadFile,
+    filename: Annotated[AllowedSystemConfigfiles, Form()],
+    uploaded_file: Annotated[UploadFile, File()],
     current_user: User = Depends(get_current_active_user),
 ):
     print(

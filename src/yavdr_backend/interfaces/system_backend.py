@@ -11,7 +11,6 @@ from enum import StrEnum
 from functools import wraps
 from pathlib import Path
 from typing import Any, Protocol
-from uuid import UUID
 import uuid
 
 import dotenv
@@ -41,6 +40,7 @@ from yavdr_backend.interfaces.systemd_unit_interface import (
 )
 
 from yavdr_backend.models.auth import Login
+from yavdr_backend.tools.enum_check import check_if_enum
 from yavdr_backend.tools.pam import verify_user
 from yavdr_backend.models.xorg import XorgConfig
 
@@ -279,6 +279,28 @@ class AnsibleJob:
         # self.ansible_event.emit(self.uuid, Status.DONE)
 
 
+class FileOption(BaseModel):
+    filepath: Path
+    required_stopped_services: list[str] = Field(default_factory=list)
+
+
+class AllowedSystemConfigfiles(StrEnum):
+    AVAHI_LINKER = "/etc/avahi-linker/default.cfg"
+    YAVDR_FRONTEND = "/etc/yavdr-frontend/config.yml"
+
+
+allowed_system_config_files_options: dict[AllowedSystemConfigfiles, FileOption] = {
+    AllowedSystemConfigfiles.AVAHI_LINKER: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.AVAHI_LINKER),
+        required_stopped_services=["avahi-linker.service"],
+    ),
+    AllowedSystemConfigfiles.YAVDR_FRONTEND: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.YAVDR_FRONTEND),
+        required_stopped_services=["yavdr-xorg"],
+    ),
+}
+
+
 class AllowedVDRConfigfiles(StrEnum):
     # IMPORTANT: this is the whitelist for all config files
     CHANNELS = "channels.conf"
@@ -288,11 +310,6 @@ class AllowedVDRConfigfiles(StrEnum):
     SOURCES = "sources.conf"
     SETUP = "setup.conf"
     MENUORG = "menuorg.xml"
-
-
-class FileOption(BaseModel):
-    filepath: Path
-    required_stopped_services: list[str] = Field(default_factory=list)
 
 
 VDR_CONFIG_DIR = Path("/var/lib/vdr")
@@ -465,18 +482,25 @@ class YavdrSystemBackend(
         # the return value is the job_id for the job, if there is no job necessary, an empty string is returned
         print(f"called save_file with {name=}, {fd=}")
         try:
-            name = AllowedVDRConfigfiles(name)
-            options = allowed_vdr_config_files_options[name]
+            if check_if_enum(name, AllowedVDRConfigfiles):
+                name = AllowedVDRConfigfiles(name)
+                options = allowed_vdr_config_files_options[name]
+                print("got VDR Config file")
+            elif check_if_enum(name, AllowedSystemConfigfiles):
+                name = AllowedSystemConfigfiles(name)
+                options = allowed_system_config_files_options[name]
+                print("got System Config file")
+            else:
+                raise ValueError(f"unknown config file {name}")
             with open(fd, "rb", closefd=False) as input_file:
                 input_file.seek(0)
                 content = input_file.read()
-        # except (ValueError, KeyError) as err:
         except Exception as err:
             print(err)
             logging.error(
-                f"method {__name__}: got non-whitelisted {name=}"
+                f"method {__name__}: got non-whitelisted {name=}: {err}"
                 if isinstance(err, ValueError)
-                else f"method {__name__}: no configuration for {name=}"
+                else f"method {__name__}: no configuration for {name=}: {err}"
             )
             raise sdbus.exceptions.DbusInvalidArgsError(
                 f"method {__name__}: got non-whitelisted {name=}"
