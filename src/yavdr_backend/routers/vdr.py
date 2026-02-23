@@ -5,6 +5,7 @@ import datetime
 
 import json
 import os
+import re
 import tempfile
 import uuid
 
@@ -621,6 +622,7 @@ async def get_vdr_channels(
             channels.append(
                 ChannelMapping(channel_number=chan_num, channel_string=chan_str)
             )
+        print(f"{channels=}")
         return channels
 
 
@@ -679,8 +681,8 @@ async def get_vdr_channels_with_groups(
     async for line in async_send_svdrpcommand("lstc :ids :groups"):
         if not line or "-" not in line:
             continue
-        _code, r = line.strip().split("-", maxsplit=1)
-        # print(r)
+        _code, r = re.split("[ -]", line.strip(), maxsplit=1)
+        print(f"processing line: {r}")
         # GROUP_RE = re.compile(r'(?P<number>\d+)\s:((?P<group_offset>@\d+)\s)?(?P<group_name>.+)')
         # TODO: make channel group parsing work
         number, other = r.split(maxsplit=1)
@@ -755,7 +757,7 @@ async def get_vdr_channels_with_groups(
                 #     tid = tf
                 # channel_id = f"{source}-{nid}-{tid}-{sid}-{rid}"
             except Exception as err:
-                print(f"could not process {other=}")
+                print(f"could not process {other=}: {err=}")
                 print(err)
                 continue
 
