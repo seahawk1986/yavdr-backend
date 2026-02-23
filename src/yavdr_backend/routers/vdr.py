@@ -1091,12 +1091,12 @@ async def get_configfile(
     return FileResponse(path)
 
 
-@router.post("/vdr/configfile/")
+@router.post("/vdr/configfile")
 async def upload_configfile(
-    filename: Annotated[AllowedSystemConfigfiles, Form()],
+    filename: Annotated[AllowedVDRConfigfiles, Form()],
     uploaded_file: Annotated[UploadFile, File()],
     current_user: User = Depends(get_current_active_user),
-):
+) -> EventSourceResponse:
     print(
         f"got {filename=} with {uploaded_file.size=} and {uploaded_file.content_type=}, {uploaded_file.headers}"
     )
