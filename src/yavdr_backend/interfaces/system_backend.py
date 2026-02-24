@@ -642,6 +642,18 @@ class YavdrSystemBackend(
             else:
                 return True, "success"
 
+    @sdbus.dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def reboot(
+        self,
+    ):
+        p = await asyncio.create_subprocess_exec("systemctl", "reboot", "-i")
+
+    @sdbus.dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def poweroff(
+        self,
+    ):
+        p = await asyncio.create_subprocess_exec("systemctl", "poweroff", "-i")
+
 
 # async def main():
 #     system_bus = sdbus.sd_bus_open_system()
