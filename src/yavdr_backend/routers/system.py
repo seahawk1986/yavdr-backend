@@ -267,3 +267,17 @@ async def upload_configfile(
 
     # TODO: make this two separate things - one for the post request and one streaming response for the status
     return EventSourceResponse(event_generator(), send_timeout=5)
+
+
+@router.post("/system/power/reboot")
+async def reboot(current_user: User = Depends(get_current_active_user)):
+    with contextlib.closing(sdbus.sd_bus_open_system()) as system_bus:
+        backend = YavdrSystemBackend.new_proxy(YAVDR_BACKEND_INTERFACE, "/", system_bus)
+        await backend.reboot()
+
+
+@router.post("/system/power/poweroff")
+async def poweroff(current_user: User = Depends(get_current_active_user)):
+    with contextlib.closing(sdbus.sd_bus_open_system()) as system_bus:
+        backend = YavdrSystemBackend.new_proxy(YAVDR_BACKEND_INTERFACE, "/", system_bus)
+        await backend.poweroff()
