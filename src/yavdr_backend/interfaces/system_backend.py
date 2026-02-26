@@ -287,6 +287,11 @@ class FileOption(BaseModel):
 class AllowedSystemConfigfiles(StrEnum):
     AVAHI_LINKER = "/etc/avahi-linker/default.cfg"
     YAVDR_FRONTEND = "/etc/yavdr-frontend/config.yml"
+    ACPIWAKEUP = "/etc/vdr/vdr-addon-acpiwakeup.conf"
+    PICOIRMP_WAKEUP = "/etc/vdr/vdr-addon-picoirmp-wakeup.conf"
+    STM32_WAKEUP = "/etc/vdr/vdr-addon-stm32irmp-wakeup.conf"
+    LIFEGUARD = "/etc/lifeguard.conf"
+    LIFEGUARD_NG = "/etc/lifeguard.yml"
 
 
 allowed_system_config_files_options: dict[AllowedSystemConfigfiles, FileOption] = {
@@ -297,6 +302,26 @@ allowed_system_config_files_options: dict[AllowedSystemConfigfiles, FileOption] 
     AllowedSystemConfigfiles.YAVDR_FRONTEND: FileOption(
         filepath=Path(AllowedSystemConfigfiles.YAVDR_FRONTEND),
         required_stopped_services=["yavdr-xorg"],
+    ),
+    AllowedSystemConfigfiles.LIFEGUARD: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.LIFEGUARD),
+        required_stopped_services=[],
+    ),
+    AllowedSystemConfigfiles.LIFEGUARD_NG: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.LIFEGUARD_NG),
+        required_stopped_services=[],
+    ),
+    AllowedSystemConfigfiles.ACPIWAKEUP: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.ACPIWAKEUP),
+        required_stopped_services=[],
+    ),
+    AllowedSystemConfigfiles.PICOIRMP_WAKEUP: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.PICOIRMP_WAKEUP),
+        required_stopped_services=[],
+    ),
+    AllowedSystemConfigfiles.STM32_WAKEUP: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.STM32_WAKEUP),
+        required_stopped_services=[],
     ),
 }
 

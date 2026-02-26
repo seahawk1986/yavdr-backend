@@ -192,6 +192,19 @@ class ConfigfileUploadData(BaseModel):
     uploaded_file: UploadFile
 
 
+@router.get("/system/configfiles")
+async def get_configfiles(
+    current_user: User = Depends(get_current_active_user),
+) -> list[str]:
+    response = [
+        f"{element.filepath}"
+        for element in allowed_system_config_files_options.values()
+        if element.filepath.is_file()
+    ]
+    print(response)
+    return response
+
+
 @router.get("/system/configfile")
 async def get_configfile(
     filename: AllowedSystemConfigfiles,
