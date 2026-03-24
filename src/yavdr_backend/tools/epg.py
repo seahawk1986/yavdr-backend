@@ -1,13 +1,8 @@
-import logging
+# import logging
 
 from enum import IntEnum
-from typing import Any, Iterable, List, Tuple, Mapping
+from typing import Any
 from pydantic import BaseModel, constr
-from pydantic.types import PositiveInt
-try:
-    from pydantic.utils import generate_model_signature
-except ImportError:
-    from pydantic.v1.utils import generate_model_signature
 
 
 class DVB_DATA_TYPE(IntEnum):
@@ -113,22 +108,26 @@ class EpgEntry(BaseModel):
     genres: List[DVB_CONTENT_NIBBLE]
 
 
-def parse_epg_entry(line_gen: Iterable) -> EpgEntry:
+# def parse_epg_entry(line_gen: Iterable[str]) -> EpgEntry:
 
-    yield EpgEntry(
-        channel_id,
-        channel_short_name,
-        channel_name, event_id,
-        event_start,
-        event_duration,
-        event_table_id,
-        event_version,
-        datastreams,
-        stream_type,
-        language,
-        vps_start,
-        genres,
-        )
+#     for line in line_gen:
+
+
+#         yield EpgEntry(
+#             channel_id,
+#             channel_short_name,
+#             channel_name,
+#             event_id,
+#             event_start,
+#             event_duration,
+#             event_table_id,
+#             event_version,
+#             datastreams,
+#             stream_type,
+#             language,
+#             vps_start,
+#             genres,
+#         )
 
 
 def parse_channel(line: str):
@@ -168,7 +167,7 @@ def parse_short_text(line: str):
 def parse_description(line: str):
     global description
     _, desc = line.split(maxsplit=1)
-    description = "\n".join(desc.split('|'))
+    description = "\n".join(desc.split("|"))
 
 
 def parse_genre(line: str):
@@ -248,24 +247,24 @@ c"""
     lines = (line for line in epg_data.splitlines() if line)
     try:
         for line in lines:
-            if not line.startswith('C '):
+            if not line.startswith("C "):
                 continue
             # we got a channel section
-            while (line := next(lines)) != 'c':
-                if line == 'E ':
+            while (line := next(lines)) != "c":
+                if line == "E ":
                     # we got a epg entry section
                     # parse time information
-                    while (line := next(lines)) != 'e':
+                    while (line := next(lines)) != "e":
                         # parse additional epg entry data
-                        if (action := parse_actions.get(line, None)):
+                        if action := parse_actions.get(line, None):
                             action(line)
                     # yield EpgEntry
-                    
+
             # parse_action.get(l[:2], lambda l: logging.warn(f"invalid line: {l}"))(line)
     except StopIteration:
         # lines has been exhausted
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_epgparser()
