@@ -1,9 +1,10 @@
 from contextlib import closing
 from enum import Enum
 import sys
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import sdbus
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -202,3 +203,19 @@ async def set_card_profile(
             "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
         )
         return await pulsectl.set_profile(data.card_name, data.profile_name)
+
+
+class SystemVolumeData(BaseModel):
+    device: str
+    volume: Annotated[float, Field(ge=0.0, le=1.53)]
+
+
+@router.post("/system/audio/volume")
+async def set_volume(
+    data: SystemVolumeData, current_user: User = Depends(get_current_active_user)
+) -> bool:
+    with closing(sdbus.sd_bus_open_system()) as bus:
+        pulsectl = OrgYavdrPulseDBusCtlInterface.new_proxy(
+            "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
+        )
+        return await pulsectl.set_volume(data.device, data.volume)
