@@ -42,6 +42,7 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
+from yavdr_backend.interfaces.vdr_remote import DeTvdrVdrRemoteInterface
 from yavdr_backend.tools.channel_interfaces import Channel
 
 
@@ -1174,6 +1175,35 @@ async def switch_channel(
     """switch to the given channel"""
     response = [line async for line in async_send_svdrpcommand(f"chan {channel}")]
     return "\n".join(response)
+
+
+class VolumeModel(BaseModel):
+    volume: Annotated[int, Field(ge=0, le=255)]
+    muted: bool
+
+
+@router.get("/vdr/volume")
+async def get_volume(
+    current_user: User = Depends(get_current_active_user),
+) -> VolumeModel:
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        remote_proxy = DeTvdrVdrRemoteInterface.new_proxy("de.tvdr.vdr", "/Remote", bus)
+        volume, muted = await remote_proxy.get_volume()
+        return VolumeModel(volume=volume, muted=muted)
+
+
+@router.post("/vdr/volume")
+async def set_volume(
+    data: VolumeModel,
+    current_user: User = Depends(get_current_active_user),
+) -> VolumeModel:
+    with contextlib.closing(sdbus.sd_bus_open_system()) as bus:
+        remote_proxy = DeTvdrVdrRemoteInterface.new_proxy("de.tvdr.vdr", "/Remote", bus)
+        await remote_proxy.set_volume(
+            ("s", "mute") if data.muted else ("i", data.volume)
+        )
+        volume, muted = await remote_proxy.get_volume()
+        return VolumeModel(volume=volume, muted=muted)
 
 
 RETRY_TIMEOUT = 15000  # milisecond
