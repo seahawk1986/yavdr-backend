@@ -1,3 +1,10 @@
+yavdr-backend (0.1.14-0yavdr0~resolute) resolute; urgency=medium
+
+  * allow setting vdr and system volume
+  * improve update status callbacks
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Thu, 26 Mar 2026 15:21:37 +0100
+
 yavdr-backend (0.1.13-0yavdr0~resolute) resolute; urgency=medium
 
   * remove temporary file from debian dir
