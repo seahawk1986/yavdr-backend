@@ -177,14 +177,50 @@ async def set_xorg_confg(
 
 @router.post("/system/update/{update_type}")
 async def update_packages(
-    update_type: UpdateTypeEnum, current_user: User = Depends(get_current_active_user)
-) -> tuple[bool, str]:
-    with closing(sdbus.sd_bus_open_system()) as system_bus:
-        backend_connection = YavdrSystemBackend(system_bus).new_proxy(
-            YAVDR_BACKEND_INTERFACE, "/", system_bus
-        )
-        success, message = await backend_connection.update(update_type)
-        return success, message
+    update_type: UpdateTypeEnum,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+) -> EventSourceResponse:
+    # tuple[bool, str]:
+    async def event_generator():
+        with closing(sdbus.sd_bus_open_system()) as system_bus:
+            backend_connection = YavdrSystemBackend(system_bus).new_proxy(
+                YAVDR_BACKEND_INTERFACE, "/", system_bus
+            )
+
+            job_uuid = await backend_connection.update(update_type)
+            runner_ident = None
+
+            async for event in backend_connection.process_event:
+                print(f"got {event=}")
+                current_job_uuid, message_type, message = event
+                if await request.is_disconnected():
+                    break
+                if current_job_uuid != job_uuid:
+                    continue
+                if message_type == Status.DONE:
+                    job_uuid = None
+                    runner_ident = None
+                    yield '{ "status": "done", "msg": "successful" }'
+                    break
+                elif message_type == Status.STARTING:
+                    _job_uuid, _runner_ident = message.split()
+                    if _job_uuid == job_uuid:
+                        runner_ident = _runner_ident
+                        print(f"set {runner_ident=}")
+                    continue
+                else:
+                    try:
+                        print(f"got message: {message}")
+                        data = json.loads(message)
+                        if data.get("event", {}).get(
+                            "runner_ident"
+                        ) == runner_ident or data.get("status", {}).get("runner_ident"):
+                            yield message
+                    except json.JSONDecodeError as e:
+                        print(e, file=sys.stderr)
+
+    return EventSourceResponse(event_generator(), send_timeout=5)
 
 
 class ConfigfileUploadData(BaseModel):

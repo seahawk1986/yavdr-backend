@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.subprocess import Process
 import inspect
 import json
 import logging
@@ -32,13 +33,6 @@ from yavdr_backend.interfaces.systemd_unit_interface import (
 )
 
 
-from yavdr_backend.interfaces.systemd_dbus_interface import (
-    OrgFreedesktopSystemd1ManagerInterface,
-)
-from yavdr_backend.interfaces.systemd_unit_interface import (
-    OrgFreedesktopSystemd1UnitInterface,
-)
-
 from yavdr_backend.models.auth import Login
 from yavdr_backend.tools.enum_check import check_if_enum
 from yavdr_backend.tools.pam import verify_user
@@ -49,7 +43,7 @@ SYSTEMD_DBUS_INTERFACE = "org.freedesktop.systemd1"
 
 dotenv.load_dotenv()
 ANSIBLE_DIR = os.environ.get("ANSIBLE_DIR", "/etc/ansible")
-JOB_LOCK = threading.Lock()
+JOB_LOCK = asyncio.Lock()
 
 ORDER_LOCK = threading.Lock()
 
@@ -140,11 +134,196 @@ class Status(StrEnum):
 class Job(Protocol):
     uuid: str
 
-    async def run(self) -> Any: ...
+    async def run(self) -> None: ...
 
 
 @dataclass
-class FileJob:
+class UpdateJob(Job):
+    uuid: str
+    update_type: UpdateTypeEnum
+    backend: "YavdrSystemBackend"
+
+    async def run(self) -> None:
+        print(f"running update job, {self.uuid=}, {self.update_type=}")
+
+        async def emit_output(p: Process, self: "UpdateJob"):
+            print(f"called emit_output for {p=}")
+            if p.stdout:
+                print(f"watching output of {p}")
+                async for line in p.stdout:
+                    if line:
+                        print(line)
+                        # Decode mit 'replace' um Fehler bei Sonderzeichen in Fortschrittsbalken zu vermeiden
+                        output = line.decode(errors="replace").rstrip()
+                        self.backend.process_event.emit(
+                            (self.uuid, "output", f'{{"msg": "{output}"}}')
+                        )
+                s, e = await p.communicate()
+                print(f"{s=}, {e=}")
+
+        async def system_update():
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            env["DEBIAN_FRONTEND"] = "noninteractive"
+            p = await asyncio.create_subprocess_exec(
+                "apt",
+                "update",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            await emit_output(p, self)
+
+            if p.returncode != 0:
+                raise ValueError("apt update failed")
+            # u = await asyncio.create_subprocess_exec(
+            u = await asyncio.create_subprocess_shell(
+                'apt-get full-upgrade -y -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef"',
+                # "apt-get",
+                # "dist-upgrade",
+                # "-y",
+                # "-o",
+                # 'Dpkg::Options::="--force-confdef"',
+                # "-o",
+                # 'Dpkg::Options::="--force-confold"',
+                env={"DEBIAN_FRONTEND": "noninteractive"},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            await emit_output(u, self)
+
+            if u.returncode != 0:
+                raise ValueError("apt-get full-upgrade failed")
+
+        async def snap_update():
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            p = await asyncio.create_subprocess_exec(
+                "snap",
+                "refresh",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            print(f"created snap update job: {p=}")
+            await emit_output(p, self)
+            print(f"done listening to {p=}")
+            if p.returncode != 0:
+                raise ValueError("snap update failed")
+
+        async def flatpak_update():
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            p = await asyncio.create_subprocess_exec(
+                "flatpak",
+                "update",
+                "--noninteractive",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            print(f"created flatpak_update job: {p=}")
+            await emit_output(p, self)
+            print(f"done listening to {p=}")
+            if p.returncode != 0:
+                raise ValueError("flatpak update failed")
+
+            p = await asyncio.create_subprocess_exec(
+                "flatpak",
+                "uninstall",
+                "--unused",
+                "--noninteractive",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            await emit_output(p, self)
+            if p.returncode != 0:
+                raise ValueError("flatpak uninstall failed")
+
+            p = await asyncio.create_subprocess_shell(
+                r"""\
+                test -f /proc/driver/nvidia/version || exit 0;
+                installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version);
+                version_part=$(sed 's/\./-/g' <<< "$installed_version");
+                grep -q "^nvidia-${version_part}" < <(flatpak list) && exit 0 || exit 1""",
+                executable="/usr/bin/bash",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+            )
+            await emit_output(p, self)
+            if p.returncode != 0:
+                raise ValueError("removing old nvidia drivers failed")
+
+        try:
+            print("Run update for {self.update_type}")
+            self.backend.process_event.emit(
+                (
+                    self.uuid,
+                    str(Status.STARTING),
+                    f"{{'msg': 'Run update for {self.update_type}'}}",
+                )
+            )
+            match self.update_type:
+                case UpdateTypeEnum.ALL:
+                    await system_update()
+                    await snap_update()
+                    await flatpak_update()
+                case UpdateTypeEnum.DEBIAN:
+                    await system_update()
+                case UpdateTypeEnum.SNAP:
+                    await snap_update()
+                case UpdateTypeEnum.FLATPAK:
+                    await flatpak_update()
+        # except Exception as err:
+        #     return False, str(err)
+
+        # else:
+        #     return True, "success"
+        finally:
+            self.backend.process_event.emit(
+                (
+                    self.uuid,
+                    str(Status.DONE),
+                    f'{{"msg": "Ended update for {self.update_type}", "status": "done"}}',
+                )
+            )
+
+
+@dataclass
+class SubprocessJob(Job):
+    uuid: str
+    command: list[str] | str
+    backend: "YavdrSystemBackend"
+    env: dict[str, str]
+
+    async def run(self) -> None:
+        if not self.command:
+            raise ValueError("Empty command")
+        if isinstance(self.command, str):
+            p = await asyncio.create_subprocess_shell(
+                self.command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=self.env,
+            )
+        else:
+            p = await asyncio.create_subprocess_exec(
+                *self.command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,  # stderr in stdout mergen für einfacheres Logging
+                env=self.env,
+            )
+        if p.stdout:
+            while line := await p.stdout.readline():
+                self.backend.process_event.emit(
+                    ("STDOUT", self.uuid, line.decode(errors="replace"))
+                )
+
+
+@dataclass
+class FileJob(Job):
     # model_config = ConfigDict(arbitrary_types_allowed=True)
     uuid: str
     file_content: bytes
@@ -152,7 +331,7 @@ class FileJob:
     required_stopped_services: list[str]
     backend: "YavdrSystemBackend"
 
-    async def run(self):
+    async def run(self) -> None:
         systemd_manager = OrgFreedesktopSystemd1ManagerInterface.new_proxy(
             SYSTEMD_DBUS_INTERFACE,
             "/org/freedesktop/systemd1",
@@ -258,7 +437,7 @@ class AnsibleJob:
             )
         )
 
-    async def run(self):
+    async def run(self) -> None:
         logging.info(
             f"adding AnsibleJob with {self.uuid=}: {self.playbook=} - {self.extravars=}"
         )
@@ -292,6 +471,7 @@ class AllowedSystemConfigfiles(StrEnum):
     STM32_WAKEUP = "/etc/vdr/vdr-addon-stm32irmp-wakeup.conf"
     LIFEGUARD = "/etc/lifeguard.conf"
     LIFEGUARD_NG = "/etc/lifeguard.yml"
+    RC_MAPS = "/etc/rc_maps.cfg"
 
 
 allowed_system_config_files_options: dict[AllowedSystemConfigfiles, FileOption] = {
@@ -321,6 +501,10 @@ allowed_system_config_files_options: dict[AllowedSystemConfigfiles, FileOption] 
     ),
     AllowedSystemConfigfiles.STM32_WAKEUP: FileOption(
         filepath=Path(AllowedSystemConfigfiles.STM32_WAKEUP),
+        required_stopped_services=[],
+    ),
+    AllowedSystemConfigfiles.RC_MAPS: FileOption(
+        filepath=Path(AllowedSystemConfigfiles.RC_MAPS),
         required_stopped_services=[],
     ),
 }
@@ -391,7 +575,7 @@ class YavdrSystemBackend(
         while True:
             job = await self.job_queue.get()
             self.current_job_uuid = job.uuid
-            with JOB_LOCK:
+            async with JOB_LOCK:
                 await job.run()
                 self.job_uuid = ""
                 self.job_queue.task_done()
@@ -492,6 +676,10 @@ class YavdrSystemBackend(
         return str(job_uuid)
 
     @sdbus.dbus_signal_async(signal_signature="sss")
+    def process_event(self) -> tuple[str, str, str]:
+        raise NotImplementedError
+
+    @sdbus.dbus_signal_async(signal_signature="sss")
     def ansible_event(self) -> tuple[str, str, str]:
         raise NotImplementedError
 
@@ -560,112 +748,22 @@ class YavdrSystemBackend(
             return job_uuid
 
     @sdbus.dbus_method_async(
-        input_signature="s", result_signature="bs", flags=sdbus.DbusUnprivilegedFlag
+        input_signature="s", result_signature="s", flags=sdbus.DbusUnprivilegedFlag
     )
-    async def update(self, update_type: UpdateTypeEnum) -> tuple[bool, str]:
+    async def update(self, update_type: UpdateTypeEnum) -> str:
         print(f"called update with {update_type=}")
+        # TODO: put into background job, forward events as dbus signals
+        job_uuid = str(uuid.uuid1())
 
-        with JOB_LOCK:
+        try:
+            self.job_queue.put_nowait(
+                UpdateJob(uuid=job_uuid, update_type=update_type, backend=self)
+            )
+        except Exception as err:
+            print("could not queue job:", err)
+            raise
 
-            async def system_update():
-                p = await asyncio.create_subprocess_exec(
-                    "apt",
-                    "update",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _stdout, stderr = await p.communicate()
-                if p.returncode != 0:
-                    raise ValueError(stderr)
-                # u = await asyncio.create_subprocess_exec(
-                u = await asyncio.create_subprocess_shell(
-                    'apt-get full-upgrade -y -o Dpkg::Options::="--force-confold" -o Dpkg::Options::="--force-confdef"',
-                    # "apt-get",
-                    # "dist-upgrade",
-                    # "-y",
-                    # "-o",
-                    # 'Dpkg::Options::="--force-confdef"',
-                    # "-o",
-                    # 'Dpkg::Options::="--force-confold"',
-                    env={"DEBIAN_FRONTEND": "noninteractive"},
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await u.communicate()
-                if u.returncode != 0:
-                    print(f"{stdout=}")
-                    print(f"{stderr=}")
-                    raise ValueError(stderr)
-                print("apt update && apt-get dist-upgrade done:", stdout, stderr)
-
-            async def snap_update():
-                p = await asyncio.create_subprocess_exec(
-                    "snap",
-                    "refresh",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _stdout, stderr = await p.communicate()
-                if p.returncode != 0:
-                    raise ValueError(stderr)
-                print(_stdout)
-
-            async def flatpak_update():
-                p = await asyncio.create_subprocess_exec(
-                    "flatpak",
-                    "update",
-                    "--noninteractive",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _stdout, stderr = await p.communicate()
-                if p.returncode != 0:
-                    raise ValueError(stderr)
-                print(_stdout)
-
-                p = await asyncio.create_subprocess_exec(
-                    "flatpak",
-                    "uninstall",
-                    "--unused",
-                    "--noninteractive",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _stdout, stderr = await p.communicate()
-                if p.returncode != 0:
-                    raise ValueError(stderr)
-                print(_stdout)
-                p = await asyncio.create_subprocess_shell(
-                    r"""\
-    test -f /proc/driver/nvidia/version || exit 0
-    installed_version=$(grep -m1 -Po '\d+\.\d+' /proc/driver/nvidia/version)
-    version_part=$(sed 's/\./-/g' <<< "$installed_version")
-    grep -q "^nvidia-${version_part}" < <(flatpak list) && exit 0 || exit 1""",
-                    executable="/usr/bin/bash",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                _stdout, stderr = await p.communicate()
-                if p.returncode != 0:
-                    raise ValueError(stderr)
-                print(_stdout)
-
-            try:
-                match update_type:
-                    case UpdateTypeEnum.ALL:
-                        await system_update()
-                        await snap_update()
-                        await flatpak_update()
-                    case UpdateTypeEnum.DEBIAN:
-                        await system_update()
-                    case UpdateTypeEnum.SNAP:
-                        await snap_update()
-                    case UpdateTypeEnum.FLATPAK:
-                        await flatpak_update()
-            except Exception as err:
-                return False, str(err)
-            else:
-                return True, "success"
+        return job_uuid
 
     @sdbus.dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
     async def reboot(
