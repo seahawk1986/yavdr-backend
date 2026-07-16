@@ -1,7 +1,7 @@
 from contextlib import closing
 from enum import Enum
 import sys
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -13,12 +13,13 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
+
 from .auth import get_current_active_user, User
 
-# from yavdr_backend.interfaces.pulsedbusctl import OrgYavdrPulseDBusCtlInterface
 from yavdr_pulse_dbusctl.main import (
     PulseDBusControl as OrgYavdrPulseDBusCtlInterface,
     Sink as TupleSink,
+    alsa,
 )
 
 
@@ -219,3 +220,62 @@ async def set_volume(
             "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl", bus=bus
         )
         return await pulsectl.set_volume(data.device, data.volume)
+
+
+class AlsaMixer(BaseModel):
+    name: str
+    card_idx: int
+    volume: int
+    volume_range: tuple[int, int]
+    is_muted: bool
+
+
+class AlsaMixerTuple(NamedTuple):
+    name: str
+    card_idx: int
+    volume: int
+    volume_range: tuple[int, int]
+    is_muted: bool
+
+
+@router.get("/system/audio/alsa_mixers")
+async def list_alsa_mixer(
+    current_user: User = Depends(get_current_active_user),
+) -> list[AlsaMixer]:
+    with closing(sdbus.sd_bus_open_system()) as bus:
+        pulsectl = alsa.AlsaDBusControl.new_proxy(
+            "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl/Alsa", bus=bus
+        )
+
+        mixer_data: list[AlsaMixer] = list()
+        mixers = await pulsectl.list_alsa_mixers()
+        for m in mixers:
+            m = AlsaMixerTuple(*m)
+            mixer_data.append(AlsaMixer.model_validate(m._asdict()))
+        return mixer_data
+
+
+class AlsaMixerData(BaseModel):
+    mixer_name: str
+    card_idx: int
+    volume: int | float
+    muted: bool
+
+
+@router.post("/system/audio/alsa_mixer_setting")
+async def set_alsa_mixer(
+    data: AlsaMixerData, current_user: User = Depends(get_current_active_user)
+) -> list[AlsaMixer]:
+    with closing(sdbus.sd_bus_open_system()) as bus:
+        pulsectl = alsa.AlsaDBusControl.new_proxy(
+            "org.yavdr.PulseDBusCtl", "/org/yavdr/PulseDBusCtl/Alsa", bus=bus
+        )
+        mixer_data: list[AlsaMixer] = list()
+        mixers = await pulsectl.set_state(
+            data.mixer_name, data.card_idx, int(data.volume), data.muted
+        )
+
+        for m in mixers:
+            m = AlsaMixerTuple(*m)
+            mixer_data.append(AlsaMixer.model_validate(m._asdict()))
+        return mixer_data
