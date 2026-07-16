@@ -225,6 +225,7 @@ async def set_volume(
 class AlsaMixer(BaseModel):
     name: str
     card_idx: int
+    card_name: str
     volume: int
     volume_range: tuple[int, int]
     is_muted: bool
@@ -233,6 +234,7 @@ class AlsaMixer(BaseModel):
 class AlsaMixerTuple(NamedTuple):
     name: str
     card_idx: int
+    card_name: str
     volume: int
     volume_range: tuple[int, int]
     is_muted: bool
